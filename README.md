@@ -133,4 +133,4 @@ podhero-backend/
 
 Simas Zavistauskas — Associate Product Manager at JPMorgan Chase, building PodHero as a side project to explore AI-powered content intelligence products.
 
-[LinkedIn](https://linkedin.com/in/simaszavistauskas)
+[LinkedIn]([https://linkedin.com/in/simaszavistauskas](https://www.linkedin.com/in/simas-zavistauskas-a1a045192/))
