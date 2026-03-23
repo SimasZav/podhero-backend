@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PodHero — Weekly Podcast Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F9F5EE;
+    --cream-mid: #F2EDE3;
+    --cream-dark: #E8E0D2;
+    --ink: #1A1814;
+    --ink-mid: #3A3530;
+    --ink-light: #6B6459;
+    --green: #2A5C38;
+    --green-light: #EEF5F0;
+    --border: #DDD5C8;
+    --serif: 'Playfair Display', Georgia, serif;
+    --body: 'Lora', Georgia, serif;
+    --mono: 'DM Mono', 'Courier New', monospace;
+  }
+
+  html, body { background: var(--cream); color: var(--ink); font-family: var(--body); line-height: 1.7; min-height: 100vh; }
+
+  /* ─── NAV ─── */
+  .nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--cream);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo { font-family: var(--serif); font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-green { color: var(--green); }
+  .btn-primary {
+    background: var(--ink); color: var(--cream); border: none; padding: 10px 24px;
+    font-family: var(--mono); font-size: 13px; cursor: pointer; letter-spacing: 0.5px;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover { background: var(--green); }
+  .btn-outline {
+    background: none; border: 1px solid var(--border); color: var(--ink-light);
+    padding: 8px 18px; font-family: var(--mono); font-size: 12px; cursor: pointer;
+    letter-spacing: 0.5px; transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ─── LANDING ─── */
+  .hero {
+    max-width: 720px; margin: 0 auto; padding: 100px 48px 80px; text-align: center;
+  }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 3px; color: var(--green);
+    text-transform: uppercase; margin-bottom: 28px;
+  }
+  .hero-title {
+    font-family: var(--serif); font-size: clamp(44px, 7vw, 68px); font-weight: 700;
+    line-height: 1.08; letter-spacing: -1.5px; margin-bottom: 28px;
+  }
+  .hero-title em { font-style: italic; color: var(--green); }
+  .hero-sub {
+    font-size: 18px; color: var(--ink-light); max-width: 500px; margin: 0 auto 48px;
+    line-height: 1.65;
+  }
+  .btn-hero {
+    display: inline-block; background: var(--green); color: white; border: none;
+    padding: 16px 44px; font-family: var(--mono); font-size: 14px; cursor: pointer;
+    letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s;
+  }
+  .btn-hero:hover { background: var(--ink); transform: translateY(-1px); }
+
+  /* Features */
+  .features {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: var(--border); gap: 1px;
+  }
+  .feature { background: var(--cream); padding: 44px 40px; }
+  .feature-num {
+    font-family: var(--mono); font-size: 11px; color: var(--green);
+    letter-spacing: 2px; margin-bottom: 20px;
+  }
+  .feature-title { font-family: var(--serif); font-size: 21px; font-weight: 600; margin-bottom: 12px; line-height: 1.25; }
+  .feature-desc { font-size: 14px; color: var(--ink-light); line-height: 1.65; }
+
+  /* Social proof */
+  .social-proof {
+    text-align: center; padding: 64px 48px; border-bottom: 1px solid var(--border);
+  }
+  .sp-text {
+    font-family: var(--serif); font-style: italic; font-size: 20px;
+    color: var(--ink-light); max-width: 520px; margin: 0 auto; line-height: 1.5;
+  }
+
+  /* ─── ONBOARDING ─── */
+  .onboarding { min-height: 100vh; background: var(--cream); display: flex; flex-direction: column; }
+  .ob-header {
+    padding: 20px 48px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .ob-progress { display: flex; gap: 8px; }
+  .ob-dot { width: 36px; height: 3px; background: var(--border); transition: background 0.3s; border-radius: 2px; }
+  .ob-dot.active { background: var(--green); }
+  .ob-body { flex: 1; max-width: 600px; margin: 0 auto; padding: 72px 48px; width: 100%; }
+  .ob-step-label {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-light);
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px;
+  }
+  .ob-title { font-family: var(--serif); font-size: 34px; font-weight: 700; margin-bottom: 10px; line-height: 1.2; }
+  .ob-sub { color: var(--ink-light); font-size: 15px; margin-bottom: 40px; }
+  .ob-input {
+    width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); background: white;
+    font-family: var(--body); font-size: 16px; color: var(--ink); outline: none;
+    transition: border-color 0.2s; margin-bottom: 32px; border-radius: 0;
+  }
+  .ob-input:focus { border-color: var(--green); }
+  .ob-next {
+    width: 100%; background: var(--ink); color: white; border: none; padding: 16px;
+    font-family: var(--mono); font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .ob-next:hover:not(:disabled) { background: var(--green); }
+  .ob-next:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Interest grid */
+  .interests-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 40px; }
+  .interest-pill {
+    display: flex; align-items: center; gap: 10px; padding: 14px 18px;
+    border: 1.5px solid var(--border); background: white; cursor: pointer;
+    font-family: var(--body); font-size: 14px; color: var(--ink);
+    transition: all 0.15s; text-align: left; position: relative;
+  }
+  .interest-pill:hover { border-color: var(--green); }
+  .interest-pill.selected { border-color: var(--green); background: var(--green-light); color: var(--green); }
+  .interest-pill .check { margin-left: auto; font-size: 12px; }
+
+  /* Podcast list */
+  .podcasts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 40px; max-height: 420px; overflow-y: auto; }
+  .podcast-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 18px; border: 1.5px solid var(--border); background: white;
+    cursor: pointer; font-size: 14px; font-family: var(--body);
+    transition: all 0.15s; color: var(--ink);
+  }
+  .podcast-item:hover { border-color: var(--green); }
+  .podcast-item.selected { border-color: var(--green); background: var(--green-light); }
+  .pod-check {
+    width: 20px; height: 20px; border: 1.5px solid var(--border); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    flex-shrink: 0; transition: all 0.15s;
+  }
+  .pod-check.checked { background: var(--green); border-color: var(--green); color: white; }
+  .error-msg { color: #C0392B; font-size: 13px; margin-bottom: 16px; font-family: var(--mono); }
+  .ob-back {
+    width: 100%; background: none; border: 1px solid var(--border); color: var(--ink-light);
+    padding: 12px; font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+    cursor: pointer; margin-top: 10px; transition: all 0.2s;
+  }
+  .ob-back:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ─── GENERATING ─── */
+  .generating {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 20px; background: var(--cream); text-align: center; padding: 40px;
+  }
+  .gen-logo { font-family: var(--serif); font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .gen-title { font-family: var(--serif); font-size: 30px; font-weight: 700; }
+  .gen-sub { color: var(--ink-light); font-size: 15px; max-width: 360px; line-height: 1.6; }
+  .gen-steps { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+  .gen-step {
+    display: flex; align-items: center; gap: 12px; font-family: var(--mono);
+    font-size: 13px; color: var(--border); transition: color 0.4s;
+  }
+  .gen-step.done { color: var(--green); }
+  .gen-step.active { color: var(--ink-mid); }
+  .gen-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+    flex-shrink: 0; transition: background 0.3s;
+  }
+  .gen-step.active .gen-dot { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+
+  /* ─── DIGEST ─── */
+  .digest-page { min-height: 100vh; background: var(--cream-mid); }
+  .digest-nav {
+    background: var(--cream); border-bottom: 1px solid var(--border);
+    padding: 16px 48px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .digest-nav-email { font-family: var(--mono); font-size: 12px; color: var(--ink-light); }
+  .digest-container { max-width: 680px; margin: 0 auto; padding: 48px 24px 80px; }
+  .digest-email { background: white; border: 1px solid var(--border); }
+
+  /* Email header */
+  .digest-email-header { background: var(--ink); color: var(--cream); padding: 44px 52px; }
+  .digest-week {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2.5px; color: #9B9489;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .digest-headline { font-family: var(--serif); font-size: 30px; font-weight: 700; line-height: 1.2; margin-bottom: 20px; }
+  .digest-intro {
+    font-size: 14px; color: #C0B8AE; line-height: 1.75;
+    border-top: 1px solid #2E2B27; padding-top: 20px;
+  }
+
+  /* Email body */
+  .digest-email-body { padding: 8px 52px 52px; }
+  .episode-card { border-bottom: 1px solid var(--border); padding: 40px 0; }
+  .episode-card:last-child { border-bottom: none; }
+  .ep-show {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--green); margin-bottom: 10px;
+  }
+  .ep-title {
+    font-family: var(--serif); font-size: 23px; font-weight: 700;
+    line-height: 1.25; margin-bottom: 8px; color: var(--ink);
+  }
+  .ep-meta { font-style: italic; font-size: 13px; color: var(--ink-light); margin-bottom: 18px; font-family: var(--body); }
+  .ep-summary { font-size: 14px; line-height: 1.8; color: var(--ink-mid); margin-bottom: 24px; }
+  .ep-takeaways { margin-bottom: 24px; }
+  .ep-takeaways-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--ink-light); margin-bottom: 12px;
+  }
+  .ep-takeaway { display: flex; gap: 12px; font-size: 13px; line-height: 1.65; margin-bottom: 10px; color: var(--ink-mid); }
+  .ep-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-top: 8px; flex-shrink: 0; }
+  .ep-quote {
+    border-left: 2.5px solid var(--green); padding: 14px 20px; margin: 24px 0;
+    font-style: italic; font-size: 14px; color: var(--ink-mid); line-height: 1.7;
+    background: var(--green-light);
+  }
+  .ep-why {
+    font-size: 12px; color: var(--ink-light); line-height: 1.6; margin-bottom: 20px;
+    padding: 12px 16px; background: var(--cream-mid); border-left: 2px solid var(--border);
+  }
+  .ep-why strong { color: var(--ink-mid); font-style: normal; font-weight: 500; }
+  .ep-listen {
+    display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono);
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--green);
+    border: 1px solid var(--green); padding: 9px 18px; cursor: pointer; background: none;
+    transition: all 0.15s;
+  }
+  .ep-listen:hover { background: var(--green); color: white; }
+
+  /* Digest footer */
+  .digest-footer {
+    background: var(--cream-mid); border-top: 1px solid var(--border);
+    padding: 28px 52px; text-align: center; font-family: var(--mono);
+    font-size: 11px; color: var(--ink-light); letter-spacing: 0.3px; line-height: 1.8;
+  }
+  .digest-note {
+    text-align: center; margin-top: 24px; font-family: var(--mono); font-size: 11px;
+    color: var(--ink-light); letter-spacing: 0.3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .nav, .ob-header { padding: 16px 20px; }
+    .hero { padding: 64px 24px 56px; }
+    .features { grid-template-columns: 1fr; }
+    .feature { padding: 32px 24px; }
+    .ob-body { padding: 48px 24px; }
+    .interests-grid { grid-template-columns: 1fr; }
+    .digest-email-header, .digest-email-body { padding-left: 28px; padding-right: 28px; }
+    .digest-footer { padding: 24px 28px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const INTERESTS = [
+  { id: "tech",       label: "Technology & AI",    emoji: "⚡" },
+  { id: "startup",    label: "Startups & VC",       emoji: "🚀" },
+  { id: "finance",    label: "Finance & Macro",     emoji: "📈" },
+  { id: "product",    label: "Product & Design",    emoji: "🎨" },
+  { id: "health",     label: "Health & Science",    emoji: "🧬" },
+  { id: "culture",    label: "Culture & Media",     emoji: "🎭" },
+  { id: "philosophy", label: "Philosophy & Ideas",  emoji: "💭" },
+  { id: "politics",   label: "Politics & Policy",   emoji: "🌐" },
+];
+
+const PODCASTS = [
+  "Lex Fridman Podcast", "Acquired", "All-In Podcast", "How I Built This",
+  "Invest Like the Best", "The Knowledge Project", "My First Million",
+  "Huberman Lab", "The Tim Ferriss Show", "a16z Podcast",
+  "Planet Money", "The Twenty Minute VC",
+];
+
+const GEN_STEPS = [
+  "Scanning podcast feeds...",
+  "Identifying new episodes...",
+  "Reading transcripts with AI...",
+  "Generating your personalized digest...",
+];
+
+/* ───────────────────────── MAIN APP ───────────────────────── */
+function App() {
+  const [page, setPage] = useState("landing");
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [interests, setInterests] = useState([]);
+  const [podcasts, setPodcasts] = useState([]);
+  const [digest, setDigest] = useState(null);
+  const [genStep, setGenStep] = useState(-1);
+  const [error, setError] = useState(null);
+
+  const toggleInterest = (id) =>
+    setInterests(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
+  const togglePodcast = (p) =>
+    setPodcasts(prev => prev.includes(p) ? prev.filter(i => i !== p) : [...prev, p]);
+
+ const startGenerate = async () => {
+    setPage("generating");
+    setGenStep(0);
+    [900, 1900, 3200].forEach((delay, i) => {
+      setTimeout(() => setGenStep(i + 1), delay);
+    });
+
+    // Save user to backend
+   fetch("http://localhost:3001/api/subscribe", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, interests, podcasts, frequency: "weekly" })
+}).then(res => res.json()).then(data => {
+  if (data.userId) {
+    fetch("http://localhost:3001/api/digests/send-now", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-key": "podhero-admin"
+      },
+      body: JSON.stringify({ userId: data.userId })
+    });
+  }
+}).catch(err => console.log("Error:", err));
+
+    const interestLabels = interests
+      .map(id => INTERESTS.find(i => i.id === id)?.label)
+      .filter(Boolean);
+
+    const podcastList = podcasts.length > 0 ? podcasts :
+      ["Lex Fridman Podcast", "Acquired", "All-In Podcast", "The Tim Ferriss Show"];
+
+    const prompt = `You are PodHero's AI digest generator. Create a realistic, intellectually substantive weekly podcast digest.
+
+User interests: ${interestLabels.length > 0 ? interestLabels.join(", ") : "technology, startups, ideas"}.
+Tracked podcasts: ${podcastList.join(", ")}.
+
+Generate exactly 4 episode summaries. Each episode should feel like a real, specific conversation with distinct ideas. Use realistic guest names, episode titles, and substantive insights tied to the user's interests.
+
+Return ONLY valid JSON (no markdown, no backticks, no explanation):
+{
+  "weekOf": "Week of March 17, 2026",
+  "intro": "Two warm, editorial sentences connecting the theme of this week's episodes. Sound like a thoughtful editor, not a bot.",
+  "episodes": [
+    {
+      "show": "exact show name from the list",
+      "title": "Specific, interesting episode title",
+      "guest": "Full Name or null if solo episode",
+      "duration": "1h 24m",
+      "summary": "2-3 sentences describing the episode's core ideas and why the conversation was notable",
+      "takeaways": [
+        "First specific, substantive takeaway",
+        "Second takeaway with real detail",
+        "Third actionable or insightful takeaway"
+      ],
+      "quote": "A specific, thoughtful insight that captures the episode's spirit. Make it feel real and worth remembering.",
+      "whyItMatters": "One sentence on why this is relevant to the user given their interests"
+    }
+  ]
+}`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": "YOUR_ANTHROPIC_API_KEY_HERE",
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      const text = data.content.map(b => b.text || "").join("");
+      const clean = text.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setGenStep(4);
+      setTimeout(() => { setDigest(parsed); setPage("digest"); }, 800);
+    } catch (err) {
+      setError("Something went wrong. Please try again.");
+      setTimeout(() => { setPage("onboarding"); setStep(3); setError(null); }, 2500);
+    }
+  };
+
+  const reset = () => {
+    setPage("landing"); setDigest(null);
+    setInterests([]); setPodcasts([]);
+    setEmail(""); setStep(1);
+  };
+
+  if (page === "landing") return <Landing onStart={() => setPage("onboarding")} />;
+  if (page === "onboarding") return (
+    <Onboarding
+      step={step} setStep={setStep}
+      email={email} setEmail={setEmail}
+      interests={interests} toggleInterest={toggleInterest}
+      podcasts={podcasts} togglePodcast={togglePodcast}
+      onGenerate={startGenerate} error={error}
+    />
+  );
+  if (page === "generating") return <Generating genStep={genStep} />;
+  if (page === "digest" && digest) return <Digest digest={digest} email={email} onReset={reset} />;
+  return null;
+}
+
+/* ─────────────────────── LANDING ─────────────────────── */
+function Landing({ onStart }) {
+  return (
+    <div>
+      <nav className="nav">
+        <div className="logo">Pod<span className="logo-green">Hero</span></div>
+        <button className="btn-primary" onClick={onStart}>Build my digest →</button>
+      </nav>
+
+      <div className="hero">
+        <div className="eyebrow">Weekly Podcast Intelligence</div>
+        <h1 className="hero-title">
+          Stay informed.<br /><em>Without the backlog.</em>
+        </h1>
+        <p className="hero-sub">
+          PodHero reads the podcasts you care about, then sends you the signal — 
+          a curated weekly briefing powered by AI.
+        </p>
+        <button className="btn-hero" onClick={onStart}>Build my digest →</button>
+      </div>
+
+      <div className="features">
+        <div className="feature">
+          <div className="feature-num">01</div>
+          <h3 className="feature-title">Select your feeds</h3>
+          <p className="feature-desc">Choose the topics, shows, and creators you follow. PodHero monitors them so you don't have to.</p>
+        </div>
+        <div className="feature">
+          <div className="feature-num">02</div>
+          <h3 className="feature-title">AI reads for you</h3>
+          <p className="feature-desc">Every new episode is transcribed and distilled — key ideas, notable quotes, and why it matters.</p>
+        </div>
+        <div className="feature">
+          <div className="feature-num">03</div>
+          <h3 className="feature-title">Delivered weekly</h3>
+          <p className="feature-desc">A polished briefing lands in your inbox every Monday. Worth five minutes to skim, worth skipping hours of audio.</p>
+        </div>
+      </div>
+
+      <div className="social-proof">
+        <p className="sp-text">"Built for the people who follow too many podcasts to actually listen to them."</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── ONBOARDING ─────────────────────── */
+function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest, podcasts, togglePodcast, onGenerate, error }) {
+  const canNext1 = email.length > 5 && email.includes("@");
+  const canNext2 = interests.length > 0;
+
+  return (
+    <div className="onboarding">
+      <div className="ob-header">
+        <div className="logo">Pod<span className="logo-green">Hero</span></div>
+        <div className="ob-progress">
+          {[1, 2, 3].map(s => (
+            <div key={s} className={`ob-dot${step >= s ? " active" : ""}`} />
+          ))}
+        </div>
+      </div>
+
+      <div className="ob-body">
+        {step === 1 && (
+          <div>
+            <div className="ob-step-label">Step 1 of 3</div>
+            <h2 className="ob-title">Where should we send your digest?</h2>
+            <p className="ob-sub">You'll receive your first briefing next Monday morning.</p>
+            <input
+              className="ob-input"
+              type="email"
+              placeholder="your@email.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && canNext1 && setStep(2)}
+              autoFocus
+            />
+            <button className="ob-next" onClick={() => setStep(2)} disabled={!canNext1}>
+              Continue →
+            </button>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div>
+            <div className="ob-step-label">Step 2 of 3</div>
+            <h2 className="ob-title">What do you care about?</h2>
+            <p className="ob-sub">Select all that apply. This shapes how we filter and rank episodes.</p>
+            <div className="interests-grid">
+              {INTERESTS.map(interest => (
+                <button
+                  key={interest.id}
+                  className={`interest-pill${interests.includes(interest.id) ? " selected" : ""}`}
+                  onClick={() => toggleInterest(interest.id)}
+                >
+                  <span style={{ fontSize: "18px" }}>{interest.emoji}</span>
+                  <span>{interest.label}</span>
+                  {interests.includes(interest.id) && <span className="check">✓</span>}
+                </button>
+              ))}
+            </div>
+            <button className="ob-next" onClick={() => setStep(3)} disabled={!canNext2}>
+              Continue →
+            </button>
+            <button className="ob-back" onClick={() => setStep(1)}>← Back</button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <div className="ob-step-label">Step 3 of 3</div>
+            <h2 className="ob-title">Which shows do you follow?</h2>
+            <p className="ob-sub">Optional — we'll include these in your digest even if they don't match your topics perfectly.</p>
+            <div className="podcasts-list">
+              {PODCASTS.map(p => (
+                <button
+                  key={p}
+                  className={`podcast-item${podcasts.includes(p) ? " selected" : ""}`}
+                  onClick={() => togglePodcast(p)}
+                >
+                  <span>{p}</span>
+                  <span className={`pod-check${podcasts.includes(p) ? " checked" : ""}`}>
+                    {podcasts.includes(p) ? "✓" : ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {error && <p className="error-msg">{error}</p>}
+            <button className="ob-next" onClick={onGenerate}>
+              Generate my digest →
+            </button>
+            <button className="ob-back" onClick={() => setStep(2)}>← Back</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── GENERATING ─────────────────────── */
+function Generating({ genStep }) {
+  return (
+    <div className="generating">
+      <div className="gen-logo">Pod<span className="logo-green">Hero</span></div>
+      <h2 className="gen-title">Building your digest</h2>
+      <p className="gen-sub">Scanning feeds, reading episodes, and distilling the signal into something worth reading.</p>
+      <div className="gen-steps">
+        {GEN_STEPS.map((label, i) => (
+          <div key={i} className={`gen-step${genStep > i ? " done" : genStep === i ? " active" : ""}`}>
+            <div className="gen-dot" />
+            <span>{genStep > i ? "✓ " : ""}{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── DIGEST ─────────────────────── */
+function Digest({ digest, email, onReset }) {
+  return (
+    <div className="digest-page">
+      <div className="digest-nav">
+        <div className="logo">Pod<span className="logo-green">Hero</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <span className="digest-nav-email">{email}</span>
+          <button className="btn-outline" onClick={onReset}>Start over</button>
+        </div>
+      </div>
+
+      <div className="digest-container">
+        <div className="digest-email">
+
+          {/* Header */}
+          <div className="digest-email-header">
+            <div className="digest-week">{digest.weekOf}</div>
+            <h2 className="digest-headline">Your Weekly Podcast Briefing</h2>
+            <p className="digest-intro">{digest.intro}</p>
+          </div>
+
+          {/* Episodes */}
+          <div className="digest-email-body">
+            {(digest.episodes || []).map((ep, i) => (
+              <div key={i} className="episode-card">
+                <div className="ep-show">{ep.show}</div>
+                <h3 className="ep-title">{ep.title}</h3>
+                <p className="ep-meta">
+                  {ep.guest ? `with ${ep.guest}` : "Solo episode"} · {ep.duration}
+                </p>
+                <p className="ep-summary">{ep.summary}</p>
+
+                <div className="ep-takeaways">
+                  <div className="ep-takeaways-label">Key Takeaways</div>
+                  {(ep.takeaways || []).map((t, j) => (
+                    <div key={j} className="ep-takeaway">
+                      <div className="ep-dot" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <blockquote className="ep-quote">"{ep.quote}"</blockquote>
+
+                <div className="ep-why">
+                  <strong>Why it matters — </strong>{ep.whyItMatters}
+                </div>
+
+                <button className="ep-listen">Listen to full episode →</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="digest-footer">
+            <div>PodHero · Weekly Podcast Intelligence</div>
+            <div>Sent to {email} · Unsubscribe</div>
+          </div>
+        </div>
+
+        <p className="digest-note">
+          ↑ Preview of your weekly digest — in production this arrives every Monday.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
