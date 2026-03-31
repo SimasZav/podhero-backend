@@ -44,17 +44,29 @@ if (isMain) {
 }
 
 async function runWeeklyDigests() {
+  console.log("[worker] runWeeklyDigests() started");
   try {
-    const { data: users, error } = await supabase
+    const { data: users, error: usersErr } = await supabase
       .from("users")
       .select("*, user_preferences(*)")
       .eq("active", true);
 
-    if (error) throw error;
+    if (usersErr) throw usersErr;
+    if (!users || users.length === 0) {
+      console.log("[worker] No active users — nothing to do.");
+      return;
+    }
     console.log(`[worker] Processing ${users.length} active users`);
 
-    // Fetch all podcast sources directly
-    const { data: allSources } = await supabase.from("podcast_sources").select("*");
+    const { data: allSources, error: sourcesErr } = await supabase
+      .from("podcast_sources")
+      .select("*");
+
+    if (sourcesErr) throw sourcesErr;
+    if (!allSources || allSources.length === 0) {
+      console.log("[worker] No podcast sources in DB — nothing to fetch.");
+      return;
+    }
     console.log(`[worker] Ingesting ${allSources.length} podcast feeds`);
 
     const episodesByShow = {};
@@ -62,26 +74,30 @@ async function runWeeklyDigests() {
       try {
         const episodes = await fetchFeed(source);
         episodesByShow[source.title] = episodes;
+        console.log(`[rss] ${source.title}: ${episodes.length} recent episodes`);
       } catch (err) {
-        console.error(`[rss] Error fetching ${source.title}:`, err.message);
+        console.error(`[rss] Error fetching ${source.title}:`, err.stack || err.message);
       }
     }
 
     const allEpisodes = Object.values(episodesByShow).flat();
-    console.log(`[worker] Summarizing ${allEpisodes.length} new episodes`);
+    console.log(`[worker] Total episodes to summarize: ${allEpisodes.length}`);
     const summarizedEpisodes = await summarizeEpisodes(allEpisodes);
+    console.log(`[worker] Summarized ${summarizedEpisodes.length} episodes`);
 
     for (const user of users) {
       try {
+        console.log(`[worker] Generating digest for ${user.email}`);
         await generateDigestForUser(user, summarizedEpisodes);
       } catch (err) {
-        console.error(`[worker] Failed for ${user.email}:`, err.message);
+        console.error(`[worker] Failed for ${user.email}:`, err.stack || err.message);
       }
     }
 
     console.log("[worker] Weekly digest run complete.");
   } catch (err) {
-    console.error("[worker] Fatal error:", err.message);
+    console.error("[worker] Fatal error:", err.stack || err.message);
+    throw err;
   }
 }
 
@@ -348,7 +364,7 @@ function scoreEpisode(episode, interests, trackedPodcasts) {
 }
 
 async function sendDigestEmail(to, { intro, episodes, weekOf }) {
-  console.log(`[email] Sending to ${to} | RESEND_FROM=${process.env.RESEND_FROM || "NOT SET"}`);
+  console.log(`[email] Sending to ${to} | RESEND_FROM=${process.env.RESEND_FROM || "NOT SET"} | API_BASE_URL=${process.env.API_BASE_URL || "NOT SET"}`);
   const unsubscribeUrl = `${process.env.API_BASE_URL}/api/unsubscribe?email=${encodeURIComponent(to)}`;
   const html = buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl });
 

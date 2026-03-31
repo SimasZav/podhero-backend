@@ -226,13 +226,14 @@ app.post("/api/digests/send-now", async (req, res) => {
   if (adminKey !== (process.env.ADMIN_KEY || "podhero-admin")) {
     return res.status(403).json({ error: "Forbidden" });
   }
-  try {
-    await runWeeklyDigests();
-    return res.json({ message: "Digest sent" });
-  } catch (err) {
-    console.error("[send-now]", err.message);
-    return res.status(500).json({ error: "Failed to send digest" });
-  }
+
+  // Respond immediately — the pipeline takes 30-60s and would hit Render's timeout.
+  // Run in background; follow progress in Render logs.
+  res.json({ message: "Digest pipeline started — check Render logs for progress." });
+
+  runWeeklyDigests().catch(err => {
+    console.error("[send-now] Pipeline failed:", err.stack || err.message);
+  });
 });
 
 // ─── Helpers ──────────────────────────────────────────────────
