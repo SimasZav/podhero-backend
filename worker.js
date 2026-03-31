@@ -160,7 +160,7 @@ Return ONLY valid JSON:
 {
   "summary": "2-3 sentence overview of the core ideas and why the conversation was notable",
   "takeaways": ["First key takeaway", "Second key takeaway", "Third key takeaway"],
-  "quote": "A specific compelling insight from the description that captures the episode's spirit",
+  "quote": "A bold, memorable insight that captures the episode's central argument in one sentence — thought-provoking and specific, not generic. Infer from the title and description what the sharpest possible claim from this conversation would be.",
   "topics": ["topic1", "topic2", "topic3"]
 }`,
       },

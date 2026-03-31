@@ -320,15 +320,41 @@
   .no-eps-note { font-family: var(--mono); font-size: 11px; color: var(--ink-light); letter-spacing: 0.3px; margin-bottom: 32px; }
 
   /* Responsive */
-  @media (max-width: 700px) {
+  @media (max-width: 768px) {
     .nav, .ob-header { padding: 16px 20px; }
     .hero { padding: 64px 24px 56px; }
     .features { grid-template-columns: 1fr; }
     .feature { padding: 32px 24px; }
     .ob-body { padding: 48px 24px; }
     .interests-grid { grid-template-columns: 1fr; }
-    .digest-email-header, .digest-email-body { padding-left: 28px; padding-right: 28px; }
-    .digest-footer { padding: 24px 28px; }
+
+    /* Digest nav */
+    .digest-nav { padding: 12px 16px; }
+    .digest-nav-email { display: none; }
+
+    /* Digest layout */
+    .digest-container { padding: 16px 0 48px; }
+    .digest-email { border-left: none; border-right: none; }
+    .digest-email-header { padding: 28px 20px; }
+    .digest-headline { font-size: 22px; }
+    .digest-intro { font-size: 13px; }
+    .digest-email-body { padding: 4px 20px 36px; }
+    .digest-footer { padding: 20px 20px; }
+
+    /* Episode cards */
+    .episode-card { padding: 28px 0; }
+    .ep-title { font-size: 18px; }
+    .ep-summary { font-size: 13px; }
+    .ep-takeaway { font-size: 13px; }
+    .ep-quote { font-size: 13px; padding: 12px 14px; }
+    .ep-why { font-size: 11px; }
+
+    /* Send button */
+    .send-digest-wrap { padding: 0 20px; }
+    .digest-note { padding: 0 20px; }
+
+    /* Bottom toast */
+    .bottom-toast { font-size: 12px; padding: 12px 20px; white-space: normal; text-align: center; max-width: calc(100vw - 40px); }
   }
 </style>
 </head>

@@ -13,6 +13,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
+import Anthropic from "@anthropic-ai/sdk";
 import { runWeeklyDigests, fetchFeed, summarizeEpisodes, scoreEpisode, generateIntro } from "./worker.js";
 
 const app = express();
@@ -23,6 +24,8 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(cors({ origin: "*" }));
@@ -173,17 +176,21 @@ app.post("/api/digests/preview", async (req, res) => {
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
 
-    const intro = await generateIntro(scored, interests);
+    const [intro, whyItMattersArr] = await Promise.all([
+      generateIntro(scored, interests),
+      generateWhyItMatters(scored, interests),
+    ]);
+
     const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-    const episodes = scored.map(ep => ({
+    const episodes = scored.map((ep, i) => ({
       show: ep.showTitle,
       title: ep.title,
       duration: ep.duration || null,
       summary: ep.summary?.summary || "",
       takeaways: ep.summary?.takeaways || [],
       quote: ep.summary?.quote || "",
-      whyItMatters: "",
+      whyItMatters: whyItMattersArr[i] || "",
       audio_url: ep.audio_url || null,
     }));
 
@@ -227,6 +234,31 @@ app.post("/api/digests/send-now", async (req, res) => {
     return res.status(500).json({ error: "Failed to send digest" });
   }
 });
+
+// ─── Helpers ──────────────────────────────────────────────────
+async function generateWhyItMatters(episodes, interests) {
+  const episodeList = episodes.map((ep, i) =>
+    `${i + 1}. "${ep.title}" from ${ep.showTitle}`
+  ).join("\n");
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 400,
+    messages: [{
+      role: "user",
+      content: `For each podcast episode below, write one sentence on why it's relevant to someone interested in: ${interests.join(", ") || "technology, ideas, startups"}.
+
+Episodes:
+${episodeList}
+
+Return ONLY a JSON array of ${episodes.length} strings, one per episode, in order. No other text.`,
+    }],
+  });
+
+  const text = message.content.map(b => b.text || "").join("");
+  const clean = text.replace(/```json|```/g, "").trim();
+  return JSON.parse(clean);
+}
 
 // ─── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => {
