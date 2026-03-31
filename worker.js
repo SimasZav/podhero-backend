@@ -296,7 +296,7 @@ async function sendDigestEmail(to, { intro, episodes, weekOf }) {
   const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM,
     to,
-    subject: `Your Weekly Podcast Digest — ${weekOf}`,
+    subject: `Your Weekly Podcast Digest — ${new Date(weekOf).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
     html,
     headers: {
       "List-Unsubscribe": `<${unsubscribeUrl}>`,
@@ -308,52 +308,64 @@ async function sendDigestEmail(to, { intro, episodes, weekOf }) {
 }
 
 function buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl }) {
-  const episodeBlocks = episodes.map(ep => `
-    <div style="border-bottom:1px solid #E8E0D2;padding:36px 0;">
-      <p style="font-family:monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#2A5C38;margin:0 0 8px">
-        ${ep.showTitle || ""}
-      </p>
-      <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:700;margin:0 0 8px;color:#1A1814;line-height:1.25">
-        ${ep.title}
-      </h2>
-      <p style="font-size:13px;color:#6B6459;margin:0 0 16px;font-style:italic">
-        ${ep.duration || ""}
-      </p>
-      <p style="font-size:14px;line-height:1.8;color:#3A3530;margin:0 0 20px">
-        ${ep.summary?.summary || ""}
-      </p>
-      <div style="margin:0 0 20px">
-        <p style="font-family:monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#6B6459;margin:0 0 10px">
+  const formattedDate = new Date(weekOf).toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric",
+  });
+
+  const episodeBlocks = episodes.map(ep => {
+    const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent((ep.showTitle || "") + " " + (ep.title || ""))}`;
+    const takeawayRows = (ep.summary?.takeaways || []).map(t => `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 8px">
+        <tr>
+          <td style="color:#2A5C38;font-size:14px;padding-right:10px;vertical-align:top;padding-top:3px">•</td>
+          <td style="font-size:13px;line-height:1.65;color:#3A3530">${t}</td>
+        </tr>
+      </table>
+    `).join("");
+
+    return `
+      <div style="border-bottom:1px solid #E8E0D2;padding:40px 0;">
+        <p style="font-family:monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#2A5C38;margin:0 0 10px">
+          ${ep.showTitle || ""}
+        </p>
+        <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:700;margin:0 0 18px;color:#1A1814;line-height:1.25">
+          ${ep.title}
+        </h2>
+        <p style="font-size:14px;line-height:1.8;color:#3A3530;margin:0 0 24px">
+          ${ep.summary?.summary || ""}
+        </p>
+        <p style="font-family:monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#6B6459;margin:0 0 12px">
           Key Takeaways
         </p>
-        ${(ep.summary?.takeaways || []).map(t => `
-          <div style="display:flex;gap:10px;margin:0 0 8px">
-            <span style="color:#2A5C38;margin-top:2px">•</span>
-            <span style="font-size:13px;line-height:1.65;color:#3A3530">${t}</span>
-          </div>
-        `).join("")}
+        <div style="margin:0 0 24px">
+          ${takeawayRows}
+        </div>
+        ${ep.summary?.quote ? `
+          <blockquote style="border-left:2.5px solid #2A5C38;padding:14px 20px;margin:0 0 24px;background:#EEF5F0;font-style:italic;font-size:14px;color:#3A3530;line-height:1.7">
+            &ldquo;${ep.summary.quote}&rdquo;
+          </blockquote>
+        ` : ""}
+        <a href="${spotifyUrl}"
+           style="display:inline-block;font-family:monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#1DB954;border:1px solid #1DB954;padding:9px 18px;text-decoration:none">
+          Find on Spotify →
+        </a>
       </div>
-      ${ep.summary?.quote ? `
-        <blockquote style="border-left:2.5px solid #2A5C38;padding:12px 18px;margin:0 0 20px;background:#EEF5F0;font-style:italic;font-size:14px;color:#3A3530;line-height:1.7">
-          "${ep.summary.quote}"
-        </blockquote>
-      ` : ""}
-      <a href="${ep.audio_url || "#"}"
-         style="display:inline-block;font-family:monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#2A5C38;border:1px solid #2A5C38;padding:9px 18px;text-decoration:none">
-        Listen to full episode →
-      </a>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
   return `
     <!DOCTYPE html>
     <html>
-    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    </head>
     <body style="margin:0;padding:0;background:#F2EDE3;font-family:Georgia,serif">
       <div style="max-width:620px;margin:0 auto;background:white;border:1px solid #DDD5C8">
+
         <div style="background:#1A1814;padding:44px 52px">
-          <p style="font-family:monospace;font-size:10px;letter-spacing:2.5px;color:#9B9489;text-transform:uppercase;margin:0 0 12px">
-            ${weekOf}
+          <p style="font-family:monospace;font-size:10px;letter-spacing:2.5px;color:#9B9489;text-transform:uppercase;margin:0 0 14px">
+            ${formattedDate}
           </p>
           <h1 style="font-family:Georgia,serif;font-size:28px;font-weight:700;color:#F9F5EE;margin:0 0 20px;line-height:1.2">
             Your Weekly Podcast Briefing
@@ -362,13 +374,16 @@ function buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl }) {
             ${intro}
           </p>
         </div>
+
         <div style="padding:8px 52px 52px">
           ${episodeBlocks}
         </div>
+
         <div style="background:#F2EDE3;border-top:1px solid #DDD5C8;padding:24px 52px;text-align:center;font-family:monospace;font-size:11px;color:#6B6459">
           <p style="margin:0">PodHero · Weekly Podcast Intelligence</p>
-          <p style="margin:4px 0 0"><a href="${unsubscribeUrl}" style="color:#6B6459">Unsubscribe</a></p>
+          <p style="margin:6px 0 0"><a href="${unsubscribeUrl}" style="color:#6B6459;text-decoration:underline">Unsubscribe</a></p>
         </div>
+
       </div>
     </body>
     </html>
