@@ -16,19 +16,42 @@ import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import { runWeeklyDigests, fetchFeed, summarizeEpisodes, scoreEpisode, generateIntro } from "./worker.js";
 
+// ─── Startup env validation ───────────────────────────────────
+const REQUIRED_ENV = [
+  "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "ANTHROPIC_API_KEY",
+  "RESEND_API_KEY", "ADMIN_KEY",
+];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length > 0) {
+  console.error(`[startup] Missing required env vars: ${missing.join(", ")}`);
+  process.exit(1);
+}
+
+const BASE_URL = process.env.API_BASE_URL || "https://podhero-backend.onrender.com";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ─── Clients ──────────────────────────────────────────────────
+// API server uses the anon key — only worker.js needs the service key.
+// Requires RLS policies in migrations/server_anon_rls.sql to be applied.
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
+  process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY
 );
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Middleware ───────────────────────────────────────────────
-app.use(cors({ origin: "*" }));
+app.use(cors({
+  origin: [
+    "https://podhero.site",
+    "https://simazav.github.io",
+    "http://localhost:3001",
+    "http://localhost:3000",
+    "http://localhost:5173",
+  ],
+}));
 app.use(express.json());
 
 // ─── Health ───────────────────────────────────────────────────
@@ -36,9 +59,24 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 // ─── GET /api/unsubscribe ─────────────────────────────────────
 // One-click unsubscribe — linked from every digest email.
+// Requires token param to prevent anyone unsubscribing arbitrary emails.
 app.get("/api/unsubscribe", async (req, res) => {
-  const { email } = req.query;
+  const { email, token } = req.query;
   if (!email) return res.status(400).send("Missing email");
+
+  // Verify token if provided (required for new subscriptions; old links without
+  // tokens still work during the transition period)
+  if (token) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("id, unsubscribe_token")
+      .eq("email", email)
+      .single();
+
+    if (!user || user.unsubscribe_token?.toString() !== token) {
+      return res.status(403).send("Invalid unsubscribe link.");
+    }
+  }
 
   const { error } = await supabase
     .from("users")
@@ -67,7 +105,7 @@ app.post("/api/subscribe", async (req, res) => {
     const { data: user, error: userErr } = await supabase
       .from("users")
       .upsert({ email, active: true }, { onConflict: "email" })
-      .select()
+      .select("id, unsubscribe_token")
       .single();
 
     if (userErr) throw userErr;
@@ -85,6 +123,7 @@ app.post("/api/subscribe", async (req, res) => {
     return res.status(201).json({
       message: "Subscribed successfully",
       userId: user.id,
+      unsubscribeToken: user.unsubscribe_token,
     });
   } catch (err) {
     console.error("[subscribe]", err.message);
@@ -223,7 +262,7 @@ app.get("/api/digests/:userId", async (req, res) => {
 // Protect this in production with an admin secret header.
 app.post("/api/digests/send-now", async (req, res) => {
   const adminKey = req.headers["x-admin-key"];
-  if (adminKey !== (process.env.ADMIN_KEY || "podhero-admin")) {
+  if (adminKey !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
 

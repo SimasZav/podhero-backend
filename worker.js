@@ -364,8 +364,20 @@ function scoreEpisode(episode, interests, trackedPodcasts) {
 }
 
 async function sendDigestEmail(to, { intro, episodes, weekOf }) {
-  console.log(`[email] Sending to ${to} | RESEND_FROM=${process.env.RESEND_FROM || "NOT SET"} | API_BASE_URL=${process.env.API_BASE_URL || "NOT SET"}`);
-  const unsubscribeUrl = `${process.env.API_BASE_URL}/api/unsubscribe?email=${encodeURIComponent(to)}`;
+  const BASE_URL = process.env.API_BASE_URL || "https://podhero-backend.onrender.com";
+  console.log(`[email] Sending to ${to} | RESEND_FROM=${process.env.RESEND_FROM || "NOT SET"} | BASE_URL=${BASE_URL}`);
+
+  // Fetch the user's unsubscribe token for a secure unsubscribe link
+  const { data: userData } = await supabase
+    .from("users")
+    .select("unsubscribe_token")
+    .eq("email", to)
+    .single();
+
+  const tokenParam = userData?.unsubscribe_token
+    ? `&token=${userData.unsubscribe_token}`
+    : "";
+  const unsubscribeUrl = `${BASE_URL}/api/unsubscribe?email=${encodeURIComponent(to)}${tokenParam}`;
   const html = buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl });
 
   const { error } = await resend.emails.send({
