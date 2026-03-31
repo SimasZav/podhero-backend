@@ -14,7 +14,7 @@ import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
-import { runWeeklyDigests } from "./worker.js";
+import { runWeeklyDigests, fetchFeed, summarizeEpisodes, scoreEpisode, generateIntro } from "./worker.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -136,17 +136,67 @@ app.put("/api/preferences", async (req, res) => {
 });
 
 // ─── POST /api/digests/preview ────────────────────────────────
-// Generates a digest preview for a user without sending email.
-// Used by the frontend to show the AI-generated digest immediately.
+// Generates a digest preview using real RSS feeds. Falls back to
+// AI-generated sample if no real episodes are found.
+// Note: takes 5-10s — fetching + summarizing live feeds.
 app.post("/api/digests/preview", async (req, res) => {
   const { email, interests = [], podcasts = [] } = req.body;
 
   if (!email) return res.status(400).json({ error: "Email required" });
 
   try {
+    // Fetch podcast sources — prefer ones matching user's selected shows, else all
+    let { data: sources } = await supabase.from("podcast_sources").select("*");
+    if (sources && sources.length > 0 && podcasts.length > 0) {
+      const matched = sources.filter(s =>
+        podcasts.some(p => s.title.toLowerCase().includes(p.toLowerCase()))
+      );
+      if (matched.length > 0) sources = matched;
+    }
+
+    const allEpisodes = [];
+    if (sources && sources.length > 0) {
+      for (const source of sources) {
+        try {
+          const eps = await fetchFeed(source);
+          allEpisodes.push(...eps);
+        } catch (err) {
+          console.error(`[preview] Error fetching ${source.title}:`, err.message);
+        }
+      }
+    }
+
+    console.log(`[preview] Fetched ${allEpisodes.length} episodes for ${email}`);
+
+    if (allEpisodes.length > 0) {
+      const summarized = await summarizeEpisodes(allEpisodes);
+      const scored = summarized
+        .map(ep => ({ ...ep, score: scoreEpisode(ep, interests, podcasts) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4);
+
+      const intro = await generateIntro(scored, interests);
+      const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+      const episodes = scored.map(ep => ({
+        show: ep.showTitle,
+        title: ep.title,
+        duration: null,
+        summary: ep.summary?.summary || "",
+        takeaways: ep.summary?.takeaways || [],
+        quote: ep.summary?.quote || "",
+        whyItMatters: "",
+        audio_url: ep.audio_url || null,
+      }));
+
+      return res.json({ weekOf, intro, episodes, isSample: false });
+    }
+
+    // Fallback — no real episodes found, generate sample
+    console.log(`[preview] No real episodes found, falling back to sample for ${email}`);
     const digest = await generateDigestContent({ interests, podcasts });
-    // Flag as sample so the frontend can display a clear disclaimer
     return res.json({ ...digest, isSample: true });
+
   } catch (err) {
     console.error("[digest/preview]", err.message);
     return res.status(500).json({ error: "Failed to generate digest preview" });

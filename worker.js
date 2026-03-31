@@ -445,4 +445,4 @@ if (process.argv.includes("--run-now")) {
   });
 }
 
-export { runWeeklyDigests };
+export { runWeeklyDigests, fetchFeed, summarizeEpisodes, scoreEpisode, generateIntro };
