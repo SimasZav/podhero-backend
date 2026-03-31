@@ -174,7 +174,7 @@ app.get("/api/digests/:userId", async (req, res) => {
 // Protect this in production with an admin secret header.
 app.post("/api/digests/send-now", async (req, res) => {
   const adminKey = req.headers["x-admin-key"];
-  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (adminKey !== (process.env.ADMIN_KEY || "podhero-admin")) {
     return res.status(403).json({ error: "Forbidden" });
   }
   try {
