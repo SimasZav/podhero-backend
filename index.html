@@ -332,75 +332,20 @@ function App() {
   body: JSON.stringify({ email, interests, podcasts, frequency: "weekly" })
 }).then(res => res.json()).then(data => {
   if (data.userId) {
-    fetch("http://localhost:3001/api/digests/send-now", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-key": "podhero-admin"
-      },
-      body: JSON.stringify({ userId: data.userId })
-    });
+    // digest send is handled server-side by the weekly worker
   }
 }).catch(err => console.log("Error:", err));
 
-    const interestLabels = interests
-      .map(id => INTERESTS.find(i => i.id === id)?.label)
-      .filter(Boolean);
-
-    const podcastList = podcasts.length > 0 ? podcasts :
-      ["Lex Fridman Podcast", "Acquired", "All-In Podcast", "The Tim Ferriss Show"];
-
-    const prompt = `You are PodHero's AI digest generator. Create a realistic, intellectually substantive weekly podcast digest.
-
-User interests: ${interestLabels.length > 0 ? interestLabels.join(", ") : "technology, startups, ideas"}.
-Tracked podcasts: ${podcastList.join(", ")}.
-
-Generate exactly 4 episode summaries. Each episode should feel like a real, specific conversation with distinct ideas. Use realistic guest names, episode titles, and substantive insights tied to the user's interests.
-
-Return ONLY valid JSON (no markdown, no backticks, no explanation):
-{
-  "weekOf": "Week of March 17, 2026",
-  "intro": "Two warm, editorial sentences connecting the theme of this week's episodes. Sound like a thoughtful editor, not a bot.",
-  "episodes": [
-    {
-      "show": "exact show name from the list",
-      "title": "Specific, interesting episode title",
-      "guest": "Full Name or null if solo episode",
-      "duration": "1h 24m",
-      "summary": "2-3 sentences describing the episode's core ideas and why the conversation was notable",
-      "takeaways": [
-        "First specific, substantive takeaway",
-        "Second takeaway with real detail",
-        "Third actionable or insightful takeaway"
-      ],
-      "quote": "A specific, thoughtful insight that captures the episode's spirit. Make it feel real and worth remembering.",
-      "whyItMatters": "One sentence on why this is relevant to the user given their interests"
-    }
-  ]
-}`;
-
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("https://podhero-backend.onrender.com/api/digests/preview", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "YOUR_ANTHROPIC_API_KEY_HERE",
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
-          messages: [{ role: "user", content: prompt }]
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, interests, podcasts })
       });
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
-      const text = data.content.map(b => b.text || "").join("");
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
       setGenStep(4);
-      setTimeout(() => { setDigest(parsed); setPage("digest"); }, 800);
+      setTimeout(() => { setDigest(data); setPage("digest"); }, 800);
     } catch (err) {
       setError("Something went wrong. Please try again.");
       setTimeout(() => { setPage("onboarding"); setStep(3); setError(null); }, 2500);

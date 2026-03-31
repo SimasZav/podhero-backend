@@ -34,6 +34,25 @@ app.use(express.json());
 // ─── Health ───────────────────────────────────────────────────
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
+// ─── GET /api/unsubscribe ─────────────────────────────────────
+// One-click unsubscribe — linked from every digest email.
+app.get("/api/unsubscribe", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).send("Missing email");
+
+  const { error } = await supabase
+    .from("users")
+    .update({ active: false })
+    .eq("email", email);
+
+  if (error) {
+    console.error("[unsubscribe]", error.message);
+    return res.status(500).send("Failed to unsubscribe. Please try again.");
+  }
+
+  return res.send("You've been unsubscribed from PodHero. No more emails.");
+});
+
 // ─── POST /api/subscribe ──────────────────────────────────────
 // Creates a new user and saves their preferences.
 app.post("/api/subscribe", async (req, res) => {
@@ -126,7 +145,8 @@ app.post("/api/digests/preview", async (req, res) => {
 
   try {
     const digest = await generateDigestContent({ interests, podcasts });
-    return res.json(digest);
+    // Flag as sample so the frontend can display a clear disclaimer
+    return res.json({ ...digest, isSample: true });
   } catch (err) {
     console.error("[digest/preview]", err.message);
     return res.status(500).json({ error: "Failed to generate digest preview" });
@@ -154,7 +174,7 @@ app.get("/api/digests/:userId", async (req, res) => {
 // Protect this in production with an admin secret header.
 app.post("/api/digests/send-now", async (req, res) => {
   const adminKey = req.headers["x-admin-key"];
-  if (adminKey !== "podhero-admin") {
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
     return res.status(403).json({ error: "Forbidden" });
   }
   try {

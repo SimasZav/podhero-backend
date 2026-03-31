@@ -8,6 +8,7 @@ import { XMLParser } from "fast-xml-parser";
 import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 import { Resend } from "resend";
+import { fileURLToPath } from "url";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -18,10 +19,14 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY);
 const xmlParser = new XMLParser({ ignoreAttributes: false });
 
-cron.schedule("0 7 * * 1", async () => {
-  console.log("[worker] Starting weekly digest run...");
-  await runWeeklyDigests();
-});
+// Only schedule the cron when worker.js is the entry point, not when imported
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  cron.schedule("0 7 * * 1", async () => {
+    console.log("[worker] Starting weekly digest run...");
+    await runWeeklyDigests();
+  });
+}
 
 async function runWeeklyDigests() {
   try {
@@ -197,6 +202,20 @@ export async function generateDigestForUser(user, summarizedEpisodes) {
   const intro = await generateIntro(scored, interests);
 
   const weekOf = getMonday(new Date()).toISOString().split("T")[0];
+
+  // Check for existing digest this week — skip if already sent (idempotent retries)
+  const { data: existing } = await supabase
+    .from("digests")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("week_of", weekOf)
+    .single();
+
+  if (existing) {
+    console.log(`[worker] Digest already sent to ${user.email} for week ${weekOf}, skipping`);
+    return;
+  }
+
   const { error } = await supabase
     .from("digests")
     .insert({
@@ -271,19 +290,24 @@ function scoreEpisode(episode, interests, trackedPodcasts) {
 }
 
 async function sendDigestEmail(to, { intro, episodes, weekOf }) {
-  const html = buildEmailHTML({ intro, episodes, weekOf });
+  const unsubscribeUrl = `${process.env.API_BASE_URL}/api/unsubscribe?email=${encodeURIComponent(to)}`;
+  const html = buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl });
 
   const { error } = await resend.emails.send({
     from: process.env.RESEND_FROM,
     to,
     subject: `Your Weekly Podcast Digest — ${weekOf}`,
     html,
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
   });
 
   if (error) throw new Error(`Resend error: ${error.message}`);
 }
 
-function buildEmailHTML({ intro, episodes, weekOf }) {
+function buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl }) {
   const episodeBlocks = episodes.map(ep => `
     <div style="border-bottom:1px solid #E8E0D2;padding:36px 0;">
       <p style="font-family:monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#2A5C38;margin:0 0 8px">
@@ -343,7 +367,7 @@ function buildEmailHTML({ intro, episodes, weekOf }) {
         </div>
         <div style="background:#F2EDE3;border-top:1px solid #DDD5C8;padding:24px 52px;text-align:center;font-family:monospace;font-size:11px;color:#6B6459">
           <p style="margin:0">PodHero · Weekly Podcast Intelligence</p>
-          <p style="margin:4px 0 0"><a href="#" style="color:#6B6459">Unsubscribe</a> · <a href="#" style="color:#6B6459">Manage preferences</a></p>
+          <p style="margin:4px 0 0"><a href="${unsubscribeUrl}" style="color:#6B6459">Unsubscribe</a></p>
         </div>
       </div>
     </body>

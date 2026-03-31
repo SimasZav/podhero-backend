@@ -15,7 +15,7 @@ create table users (
 -- ─── USER PREFERENCES ────────────────────────────────────────
 create table user_preferences (
   id          uuid primary key default uuid_generate_v4(),
-  user_id     uuid references users(id) on delete cascade,
+  user_id     uuid references users(id) on delete cascade unique,  -- unique required for upsert onConflict
   interests   text[] default '{}',       -- e.g. ['tech', 'startup', 'finance']
   podcasts    text[] default '{}',       -- e.g. ['Acquired', 'Lex Fridman Podcast']
   frequency   text default 'weekly',     -- 'weekly' | 'daily'
@@ -65,7 +65,8 @@ create table digests (
   intro        text,
   episode_ids  uuid[],                   -- ordered list of included episodes
   sent_at      timestamptz,
-  created_at   timestamptz default now()
+  created_at   timestamptz default now(),
+  unique (user_id, week_of)             -- prevent duplicate digests per user per week
 );
 
 -- ─── INDEXES ─────────────────────────────────────────────────
