@@ -180,6 +180,42 @@ Return ONLY valid JSON:
   return data || parsed;
 }
 
+async function sendPreviewDigest(user, interests, trackedPodcasts) {
+  const prompt = `You are PodHero's AI digest generator. Create a realistic, intellectually substantive weekly podcast digest.
+
+User interests: ${interests.join(", ") || "technology, startups, ideas"}.
+Tracked podcasts: ${trackedPodcasts.join(", ") || "Acquired, Lex Fridman, All-In Podcast"}.
+
+Generate exactly 4 episode summaries. Each episode should feel like a real, specific conversation with distinct ideas.
+
+Return ONLY valid JSON (no markdown, no backticks):
+{
+  "intro": "Two warm editorial sentences connecting this week's theme.",
+  "episodes": [
+    {
+      "showTitle": "exact show name",
+      "title": "Specific interesting episode title",
+      "duration": null,
+      "summary": { "summary": "2-3 sentences on the core ideas", "takeaways": ["First", "Second", "Third"], "quote": "A specific memorable insight" }
+    }
+  ]
+}`;
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1500,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const text = message.content.map(b => b.text || "").join("");
+  const clean = text.replace(/```json|```/g, "").trim();
+  const data = JSON.parse(clean);
+
+  const weekOf = getMonday(new Date()).toISOString().split("T")[0];
+  console.log(`[worker] Sending preview digest to ${user.email}`);
+  await sendDigestEmail(user.email, { intro: data.intro, episodes: data.episodes, weekOf });
+}
+
 export async function generateDigestForUser(user, summarizedEpisodes) {
   const prefs = user.user_preferences?.[0];
   const interests = prefs?.interests || [];
@@ -195,7 +231,8 @@ export async function generateDigestForUser(user, summarizedEpisodes) {
     .slice(0, 5);
 
   if (scored.length === 0) {
-    console.log(`[worker] No relevant episodes for ${user.email}, skipping`);
+    console.log(`[worker] No scored episodes for ${user.email} — falling back to preview digest`);
+    await sendPreviewDigest(user, interests, trackedPodcasts);
     return;
   }
 
@@ -290,6 +327,7 @@ function scoreEpisode(episode, interests, trackedPodcasts) {
 }
 
 async function sendDigestEmail(to, { intro, episodes, weekOf }) {
+  console.log(`[email] Sending to ${to} | RESEND_FROM=${process.env.RESEND_FROM || "NOT SET"}`);
   const unsubscribeUrl = `${process.env.API_BASE_URL}/api/unsubscribe?email=${encodeURIComponent(to)}`;
   const html = buildEmailHTML({ intro, episodes, weekOf, unsubscribeUrl });
 

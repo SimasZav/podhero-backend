@@ -275,12 +275,20 @@
   }
   .btn-send-digest:hover:not(:disabled) { background: var(--ink); }
   .btn-send-digest:disabled { opacity: 0.5; cursor: not-allowed; }
-  .send-digest-status {
-    margin-top: 12px; font-family: var(--mono); font-size: 12px;
-    color: var(--ink-light); letter-spacing: 0.3px;
+
+  /* Bottom toast */
+  .bottom-toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+    padding: 14px 28px; border-radius: 4px; font-family: var(--mono);
+    font-size: 13px; letter-spacing: 0.3px; color: white; z-index: 200;
+    white-space: nowrap; pointer-events: none;
+    animation: toastIn 0.25s ease forwards;
   }
-  .send-digest-status.success { color: var(--green); }
-  .send-digest-status.error { color: #C0392B; }
+  .bottom-toast.hiding { animation: toastOut 0.4s ease forwards; }
+  .bottom-toast.success { background: var(--green); }
+  .bottom-toast.error { background: #C0392B; }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  @keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(12px); } }
 
   /* Success toast */
   .toast-overlay {
@@ -320,7 +328,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const INTERESTS = [
   { id: "tech",       label: "Technology & AI",    emoji: "⚡" },
@@ -347,6 +355,32 @@ const GEN_STEPS = [
   "Generating your personalized digest...",
 ];
 
+/* ─────────────────────── BOTTOM TOAST ─────────────────────── */
+function useToast() {
+  const [toast, setToast] = useState(null); // { msg, type, hiding }
+  const timerRef = useRef(null);
+
+  const showToast = (msg, type = "success") => {
+    clearTimeout(timerRef.current);
+    setToast({ msg, type, hiding: false });
+    timerRef.current = setTimeout(() => {
+      setToast(t => t ? { ...t, hiding: true } : null);
+      setTimeout(() => setToast(null), 400);
+    }, 4000);
+  };
+
+  return { toast, showToast };
+}
+
+function BottomToast({ toast }) {
+  if (!toast) return null;
+  return (
+    <div className={`bottom-toast ${toast.type}${toast.hiding ? " hiding" : ""}`}>
+      {toast.msg}
+    </div>
+  );
+}
+
 /* ───────────────────────── MAIN APP ───────────────────────── */
 function App() {
   const [page, setPage] = useState("landing");
@@ -358,6 +392,7 @@ function App() {
   const [genStep, setGenStep] = useState(-1);
   const [error, setError] = useState(null);
   const [showToast, setShowToast] = useState(false);
+  const { toast, showToast: showBottomToast } = useToast();
 
   const toggleInterest = (id) =>
     setInterests(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
@@ -422,7 +457,12 @@ function App() {
       <Generating genStep={genStep} />
     </>
   );
-  if (page === "digest" && digest) return <Digest digest={digest} email={email} onReset={reset} />;
+  if (page === "digest" && digest) return (
+    <>
+      <Digest digest={digest} email={email} onReset={reset} showToast={showBottomToast} />
+      <BottomToast toast={toast} />
+    </>
+  );
   return null;
 }
 
@@ -608,21 +648,23 @@ function Generating({ genStep }) {
 }
 
 /* ─────────────────────── DIGEST ─────────────────────── */
-function Digest({ digest, email, onReset }) {
+function Digest({ digest, email, onReset, showToast }) {
   const [unsubscribed, setUnsubscribed] = useState(false);
-  const [sendState, setSendState] = useState("idle"); // idle | loading | success | error
+  const [sending, setSending] = useState(false);
 
   const handleSendNow = async () => {
-    setSendState("loading");
+    setSending(true);
     try {
       const res = await fetch("https://podhero-backend.onrender.com/api/digests/send-now", {
         method: "POST",
         headers: { "x-admin-key": "podhero-admin" },
       });
       if (!res.ok) throw new Error(`${res.status}`);
-      setSendState("success");
+      showToast("📬 Check your inbox! Your digest is on its way.", "success");
     } catch (_) {
-      setSendState("error");
+      showToast("Something went wrong — try again.", "error");
+    } finally {
+      setSending(false);
     }
   };
 
@@ -645,6 +687,7 @@ function Digest({ digest, email, onReset }) {
       );
     } catch (_) {}
     setUnsubscribed(true);
+    showToast("You've been unsubscribed.", "success");
   };
 
   return (
@@ -728,16 +771,10 @@ function Digest({ digest, email, onReset }) {
           <button
             className="btn-send-digest"
             onClick={handleSendNow}
-            disabled={sendState === "loading" || sendState === "success"}
+            disabled={sending}
           >
-            {sendState === "loading" ? "Sending..." : "Send me this digest →"}
+            {sending ? "Sending..." : "Send me this digest →"}
           </button>
-          {sendState === "success" && (
-            <p className="send-digest-status success">Check your inbox! Your digest is on its way.</p>
-          )}
-          {sendState === "error" && (
-            <p className="send-digest-status error">Something went wrong — try again.</p>
-          )}
         </div>
       </div>
     </div>
