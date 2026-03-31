@@ -265,6 +265,45 @@
   }
   .unsub-btn:hover { color: var(--ink); }
 
+  /* Send digest button */
+  .send-digest-wrap { text-align: center; margin-top: 32px; }
+  .btn-send-digest {
+    background: var(--green); color: white; border: none;
+    padding: 14px 36px; font-family: var(--mono); font-size: 13px;
+    letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-send-digest:hover:not(:disabled) { background: var(--ink); }
+  .btn-send-digest:disabled { opacity: 0.5; cursor: not-allowed; }
+  .send-digest-status {
+    margin-top: 12px; font-family: var(--mono); font-size: 12px;
+    color: var(--ink-light); letter-spacing: 0.3px;
+  }
+  .send-digest-status.success { color: var(--green); }
+  .send-digest-status.error { color: #C0392B; }
+
+  /* Success toast */
+  .toast-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 24, 20, 0.55); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.25s ease;
+  }
+  .toast-box {
+    background: white; border: 1px solid var(--border);
+    padding: 44px 52px; text-align: center; max-width: 420px; width: 90%;
+    animation: slideUp 0.3s ease;
+  }
+  .toast-emoji { font-size: 36px; margin-bottom: 16px; }
+  .toast-title {
+    font-family: var(--serif); font-size: 26px; font-weight: 700;
+    color: var(--ink); margin-bottom: 12px; line-height: 1.2;
+  }
+  .toast-body { font-size: 15px; color: var(--ink-light); line-height: 1.65; }
+  .toast-body strong { color: var(--green); font-style: normal; font-weight: 600; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
   /* Responsive */
   @media (max-width: 700px) {
     .nav, .ob-header { padding: 16px 20px; }
@@ -318,6 +357,7 @@ function App() {
   const [digest, setDigest] = useState(null);
   const [genStep, setGenStep] = useState(-1);
   const [error, setError] = useState(null);
+  const [showToast, setShowToast] = useState(false);
 
   const toggleInterest = (id) =>
     setInterests(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
@@ -325,6 +365,8 @@ function App() {
     setPodcasts(prev => prev.includes(p) ? prev.filter(i => i !== p) : [...prev, p]);
 
  const startGenerate = async () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
     setPage("generating");
     setGenStep(0);
     [900, 1900, 3200].forEach((delay, i) => {
@@ -374,9 +416,38 @@ function App() {
       onGenerate={startGenerate} error={error}
     />
   );
-  if (page === "generating") return <Generating genStep={genStep} />;
+  if (page === "generating") return (
+    <>
+      {showToast && <SuccessToast />}
+      <Generating genStep={genStep} />
+    </>
+  );
   if (page === "digest" && digest) return <Digest digest={digest} email={email} onReset={reset} />;
   return null;
+}
+
+/* ─────────────────────── SUCCESS TOAST ─────────────────────── */
+function SuccessToast() {
+  const nextMonday = (() => {
+    const d = new Date();
+    const day = d.getDay();
+    const daysUntilMonday = day === 0 ? 1 : 8 - day;
+    d.setDate(d.getDate() + daysUntilMonday);
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  })();
+
+  return (
+    <div className="toast-overlay">
+      <div className="toast-box">
+        <div className="toast-emoji">🎉</div>
+        <div className="toast-title">You're in!</div>
+        <p className="toast-body">
+          Your first digest lands <strong>Monday, {nextMonday}</strong>.<br />
+          Enjoy a preview of shows you might love below.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────── LANDING ─────────────────────── */
@@ -539,6 +610,21 @@ function Generating({ genStep }) {
 /* ─────────────────────── DIGEST ─────────────────────── */
 function Digest({ digest, email, onReset }) {
   const [unsubscribed, setUnsubscribed] = useState(false);
+  const [sendState, setSendState] = useState("idle"); // idle | loading | success | error
+
+  const handleSendNow = async () => {
+    setSendState("loading");
+    try {
+      const res = await fetch("https://podhero-backend.onrender.com/api/digests/send-now", {
+        method: "POST",
+        headers: { "x-admin-key": "podhero-admin" },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setSendState("success");
+    } catch (_) {
+      setSendState("error");
+    }
+  };
 
   const todayLabel = new Date().toLocaleDateString("en-US", {
     month: "long", day: "numeric", year: "numeric"
@@ -637,6 +723,22 @@ function Digest({ digest, email, onReset }) {
         <p className="digest-note">
           You're subscribed! Your first digest arrives Monday morning.
         </p>
+
+        <div className="send-digest-wrap">
+          <button
+            className="btn-send-digest"
+            onClick={handleSendNow}
+            disabled={sendState === "loading" || sendState === "success"}
+          >
+            {sendState === "loading" ? "Sending..." : "Send me this digest →"}
+          </button>
+          {sendState === "success" && (
+            <p className="send-digest-status success">Check your inbox! Your digest is on its way.</p>
+          )}
+          {sendState === "error" && (
+            <p className="send-digest-status error">Something went wrong — try again.</p>
+          )}
+        </div>
       </div>
     </div>
   );
