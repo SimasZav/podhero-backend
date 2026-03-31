@@ -15,6 +15,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+function formatDuration(raw) {
+  if (!raw) return null;
+  let totalSeconds;
+  if (/^\d+$/.test(String(raw))) {
+    totalSeconds = parseInt(raw, 10);
+  } else {
+    const parts = String(raw).split(":").map(Number);
+    totalSeconds = parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+  }
+  if (!totalSeconds || isNaN(totalSeconds)) return null;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.round((totalSeconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const resend = new Resend(process.env.RESEND_API_KEY);
 const xmlParser = new XMLParser({ ignoreAttributes: false });
@@ -92,6 +107,7 @@ async function fetchFeed(source) {
   const episodes = [];
   for (const item of recent) {
     const guid = item.guid?.["#text"] || item.guid || item.link;
+    console.log(`[rss] "${item.title}" — raw pubDate: ${item.pubDate}`);
 
     const episodeData = {
       podcast_id: source.id,
@@ -99,7 +115,7 @@ async function fetchFeed(source) {
       title: item.title,
       description: item.description?.substring(0, 500) || "",
       audio_url: item.enclosure?.["@_url"] || null,
-      duration: item["itunes:duration"] || null,
+      duration: formatDuration(item["itunes:duration"]),
       pub_date: new Date(item.pubDate).toISOString(),
     };
 
@@ -161,6 +177,7 @@ Return ONLY valid JSON:
   "summary": "2-3 sentence overview of the core ideas and why the conversation was notable",
   "takeaways": ["First key takeaway", "Second key takeaway", "Third key takeaway"],
   "quote": "A bold, memorable insight that captures the episode's central argument in one sentence — thought-provoking and specific, not generic. Infer from the title and description what the sharpest possible claim from this conversation would be.",
+  "why_it_matters": "One sentence on the broader significance of this episode — what it means for the field, industry, or the listener's thinking.",
   "topics": ["topic1", "topic2", "topic3"]
 }`,
       },
@@ -170,6 +187,10 @@ Return ONLY valid JSON:
   const text = message.content.map(b => b.text || "").join("");
   const clean = text.replace(/```json|```/g, "").trim();
   const parsed = JSON.parse(clean);
+
+  if (!parsed.why_it_matters) {
+    console.warn(`[claude] why_it_matters missing for "${episode.title}"`);
+  }
 
   const { data } = await supabase
     .from("summaries")

@@ -363,6 +363,21 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+function formatDuration(raw) {
+  if (!raw) return null;
+  let totalSeconds;
+  if (/^\d+$/.test(String(raw))) {
+    totalSeconds = parseInt(raw, 10);
+  } else {
+    const parts = String(raw).split(":").map(Number);
+    totalSeconds = parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+  }
+  if (!totalSeconds || isNaN(totalSeconds)) return null;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.round((totalSeconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 const INTERESTS = [
   { id: "tech",       label: "Technology & AI",    emoji: "⚡" },
   { id: "startup",    label: "Startups & VC",       emoji: "🚀" },
@@ -772,7 +787,7 @@ function Digest({ digest, email, onReset, showToast }) {
                 <div className="ep-show">{ep.show}</div>
                 <h3 className="ep-title">{ep.title}</h3>
                 <p className="ep-meta">
-                  {mondayLabel}{ep.duration ? ` · ${ep.duration}` : ""}
+                  {mondayLabel}{formatDuration(ep.duration) ? ` · ${formatDuration(ep.duration)}` : ""}
                 </p>
                 <p className="ep-summary">{ep.summary}</p>
 
@@ -788,9 +803,11 @@ function Digest({ digest, email, onReset, showToast }) {
 
                 <blockquote className="ep-quote">"{ep.quote}"</blockquote>
 
-                <div className="ep-why">
-                  <strong>Why it matters — </strong>{ep.whyItMatters}
-                </div>
+                {ep.whyItMatters && (
+                  <div className="ep-why">
+                    <strong>Why it matters — </strong>{ep.whyItMatters}
+                  </div>
+                )}
 
                 <a
                   href={`https://open.spotify.com/search/${encodeURIComponent((ep.show || "") + " " + (ep.title || ""))}`}
