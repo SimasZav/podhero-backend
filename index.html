@@ -385,41 +385,40 @@ function Landing({ onStart }) {
     <div>
       <nav className="nav">
         <div className="logo">Pod<span className="logo-green">Hero</span></div>
-        <button className="btn-primary" onClick={onStart}>Build my digest →</button>
+        <button className="btn-primary" onClick={onStart}>Get my weekly briefing →</button>
       </nav>
 
       <div className="hero">
-        <div className="eyebrow">Weekly Podcast Intelligence</div>
+        <div className="eyebrow">Your personal podcast editor</div>
         <h1 className="hero-title">
-          Stay informed.<br /><em>Without the backlog.</em>
+          Too many podcasts,<br /><em>not enough time.</em>
         </h1>
         <p className="hero-sub">
-          PodHero reads the podcasts you care about, then sends you the signal — 
-          a curated weekly briefing powered by AI.
+          PodHero listens so you don't have to. Every Monday morning, get a crisp briefing on what's worth knowing — pulled from the shows you actually follow.
         </p>
-        <button className="btn-hero" onClick={onStart}>Build my digest →</button>
+        <button className="btn-hero" onClick={onStart}>Get my weekly briefing →</button>
       </div>
 
       <div className="features">
         <div className="feature">
           <div className="feature-num">01</div>
-          <h3 className="feature-title">Select your feeds</h3>
-          <p className="feature-desc">Choose the topics, shows, and creators you follow. PodHero monitors them so you don't have to.</p>
+          <h3 className="feature-title">Pick your shows</h3>
+          <p className="feature-desc">Tell us what you listen to — or wish you had time for. We'll keep tabs on every new episode.</p>
         </div>
         <div className="feature">
           <div className="feature-num">02</div>
-          <h3 className="feature-title">AI reads for you</h3>
-          <p className="feature-desc">Every new episode is transcribed and distilled — key ideas, notable quotes, and why it matters.</p>
+          <h3 className="feature-title">We do the listening</h3>
+          <p className="feature-desc">AI distills each episode into the key ideas, best quotes, and what actually matters. No fluff.</p>
         </div>
         <div className="feature">
           <div className="feature-num">03</div>
-          <h3 className="feature-title">Delivered weekly</h3>
-          <p className="feature-desc">A polished briefing lands in your inbox every Monday. Worth five minutes to skim, worth skipping hours of audio.</p>
+          <h3 className="feature-title">Monday in your inbox</h3>
+          <p className="feature-desc">One clean email, every week. Five minutes to read. No more podcast guilt.</p>
         </div>
       </div>
 
       <div className="social-proof">
-        <p className="sp-text">"Built for the people who follow too many podcasts to actually listen to them."</p>
+        <p className="sp-text">"Finally caught up on everything I care about — without listening to a single episode."</p>
       </div>
     </div>
   );
@@ -545,6 +544,14 @@ function Digest({ digest, email, onReset }) {
     month: "long", day: "numeric", year: "numeric"
   });
 
+  const mondayLabel = (() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  })();
+
   const handleUnsubscribe = async () => {
     try {
       await fetch(
@@ -581,7 +588,7 @@ function Digest({ digest, email, onReset }) {
                 <div className="ep-show">{ep.show}</div>
                 <h3 className="ep-title">{ep.title}</h3>
                 <p className="ep-meta">
-                  {ep.guest ? `with ${ep.guest}` : "Solo episode"} · {ep.duration}
+                  {mondayLabel}{ep.duration ? ` · ${ep.duration}` : ""}
                 </p>
                 <p className="ep-summary">{ep.summary}</p>
 
@@ -601,11 +608,15 @@ function Digest({ digest, email, onReset }) {
                   <strong>Why it matters — </strong>{ep.whyItMatters}
                 </div>
 
-                {ep.audio_url && ep.audio_url !== "#" && (
-                  <a href={ep.audio_url} className="ep-listen" target="_blank" rel="noreferrer">
-                    Listen to full episode →
-                  </a>
-                )}
+                <a
+                  href={`https://open.spotify.com/search/${encodeURIComponent((ep.show || "") + " " + (ep.title || ""))}`}
+                  className="ep-listen"
+                  style={{ color: "#1DB954", borderColor: "#1DB954" }}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Find on Spotify →
+                </a>
               </div>
             ))}
           </div>
