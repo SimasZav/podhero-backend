@@ -312,6 +312,13 @@
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* No episodes */
+  .no-eps-page { min-height: 100vh; background: var(--cream); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+  .no-eps-icon { font-size: 48px; margin-bottom: 24px; }
+  .no-eps-title { font-family: var(--serif); font-size: 28px; font-weight: 700; margin-bottom: 16px; color: var(--ink); line-height: 1.2; }
+  .no-eps-body { font-size: 15px; color: var(--ink-light); max-width: 440px; line-height: 1.7; margin-bottom: 36px; }
+  .no-eps-note { font-family: var(--mono); font-size: 11px; color: var(--ink-light); letter-spacing: 0.3px; margin-bottom: 32px; }
+
   /* Responsive */
   @media (max-width: 700px) {
     .nav, .ob-header { padding: 16px 20px; }
@@ -425,6 +432,11 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, interests, podcasts })
       });
+      if (res.status === 404) {
+        setGenStep(4);
+        setTimeout(() => setPage("no-episodes"), 800);
+        return;
+      }
       if (!res.ok) throw new Error(`${res.status}`);
       const data = await res.json();
       setGenStep(4);
@@ -457,6 +469,7 @@ function App() {
       <Generating genStep={genStep} />
     </>
   );
+  if (page === "no-episodes") return <NoEpisodes email={email} onReset={reset} />;
   if (page === "digest" && digest) return (
     <>
       <Digest digest={digest} email={email} onReset={reset} showToast={showBottomToast} />
@@ -464,6 +477,22 @@ function App() {
     </>
   );
   return null;
+}
+
+/* ─────────────────────── NO EPISODES ─────────────────────── */
+function NoEpisodes({ email, onReset }) {
+  return (
+    <div className="no-eps-page">
+      <div className="no-eps-icon">📭</div>
+      <h2 className="no-eps-title">No new episodes this week</h2>
+      <p className="no-eps-body">
+        No new episodes were found for your selected shows this week.
+        Your Monday digest will include the latest episodes when they drop.
+      </p>
+      <p className="no-eps-note">Subscribed as {email}</p>
+      <button className="btn-hero" onClick={onReset}>Back to home</button>
+    </div>
+  );
 }
 
 /* ─────────────────────── SUCCESS TOAST ─────────────────────── */

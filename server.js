@@ -13,7 +13,6 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
-import Anthropic from "@anthropic-ai/sdk";
 import { runWeeklyDigests, fetchFeed, summarizeEpisodes, scoreEpisode, generateIntro } from "./worker.js";
 
 const app = express();
@@ -24,8 +23,6 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(cors({ origin: "*" }));
@@ -136,16 +133,14 @@ app.put("/api/preferences", async (req, res) => {
 });
 
 // ─── POST /api/digests/preview ────────────────────────────────
-// Generates a digest preview using real RSS feeds. Falls back to
-// AI-generated sample if no real episodes are found.
-// Note: takes 5-10s — fetching + summarizing live feeds.
+// Fetches real RSS episodes, summarizes with Claude, returns top 4.
+// Note: takes 5-15s on first run; subsequent runs use cached summaries.
 app.post("/api/digests/preview", async (req, res) => {
   const { email, interests = [], podcasts = [] } = req.body;
 
   if (!email) return res.status(400).json({ error: "Email required" });
 
   try {
-    // Fetch podcast sources — prefer ones matching user's selected shows, else all
     let { data: sources } = await supabase.from("podcast_sources").select("*");
     if (sources && sources.length > 0 && podcasts.length > 0) {
       const matched = sources.filter(s =>
@@ -155,47 +150,44 @@ app.post("/api/digests/preview", async (req, res) => {
     }
 
     const allEpisodes = [];
-    if (sources && sources.length > 0) {
-      for (const source of sources) {
-        try {
-          const eps = await fetchFeed(source);
-          allEpisodes.push(...eps);
-        } catch (err) {
-          console.error(`[preview] Error fetching ${source.title}:`, err.message);
-        }
+    for (const source of (sources || [])) {
+      try {
+        const eps = await fetchFeed(source);
+        allEpisodes.push(...eps);
+      } catch (err) {
+        console.error(`[preview] Error fetching ${source.title}:`, err.message);
       }
     }
 
     console.log(`[preview] Fetched ${allEpisodes.length} episodes for ${email}`);
 
-    if (allEpisodes.length > 0) {
-      const summarized = await summarizeEpisodes(allEpisodes);
-      const scored = summarized
-        .map(ep => ({ ...ep, score: scoreEpisode(ep, interests, podcasts) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 4);
-
-      const intro = await generateIntro(scored, interests);
-      const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
-      const episodes = scored.map(ep => ({
-        show: ep.showTitle,
-        title: ep.title,
-        duration: null,
-        summary: ep.summary?.summary || "",
-        takeaways: ep.summary?.takeaways || [],
-        quote: ep.summary?.quote || "",
-        whyItMatters: "",
-        audio_url: ep.audio_url || null,
-      }));
-
-      return res.json({ weekOf, intro, episodes, isSample: false });
+    if (allEpisodes.length === 0) {
+      return res.status(404).json({
+        error: "No new episodes found this week for your selected shows. Check back Monday.",
+      });
     }
 
-    // Fallback — no real episodes found, generate sample
-    console.log(`[preview] No real episodes found, falling back to sample for ${email}`);
-    const digest = await generateDigestContent({ interests, podcasts });
-    return res.json({ ...digest, isSample: true });
+    const summarized = await summarizeEpisodes(allEpisodes);
+    const scored = summarized
+      .map(ep => ({ ...ep, score: scoreEpisode(ep, interests, podcasts) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
+
+    const intro = await generateIntro(scored, interests);
+    const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+    const episodes = scored.map(ep => ({
+      show: ep.showTitle,
+      title: ep.title,
+      duration: ep.duration || null,
+      summary: ep.summary?.summary || "",
+      takeaways: ep.summary?.takeaways || [],
+      quote: ep.summary?.quote || "",
+      whyItMatters: "",
+      audio_url: ep.audio_url || null,
+    }));
+
+    return res.json({ weekOf, intro, episodes });
 
   } catch (err) {
     console.error("[digest/preview]", err.message);
@@ -235,44 +227,6 @@ app.post("/api/digests/send-now", async (req, res) => {
     return res.status(500).json({ error: "Failed to send digest" });
   }
 });
-
-// ─── Helpers ──────────────────────────────────────────────────
-export async function generateDigestContent({ interests, podcasts }) {
-  const prompt = `You are PodHero's AI digest generator. Create a realistic, intellectually substantive weekly podcast digest.
-
-User interests: ${interests.join(", ") || "technology, startups, ideas"}.
-Tracked podcasts: ${podcasts.join(", ") || "Acquired, Lex Fridman, All-In Podcast"}.
-
-Generate exactly 4 episode summaries. Each episode should feel like a real, specific conversation with distinct ideas.
-
-Return ONLY valid JSON (no markdown, no backticks):
-{
-  "weekOf": "Week of March 17, 2026",
-  "intro": "Two warm editorial sentences connecting this week's theme.",
-  "episodes": [
-    {
-      "show": "exact show name",
-      "title": "Specific interesting episode title",
-      "guest": "Full Name or null",
-      "duration": "1h 24m",
-      "summary": "2-3 sentences on the core ideas",
-      "takeaways": ["First takeaway", "Second takeaway", "Third takeaway"],
-      "quote": "A specific memorable insight from the episode",
-      "whyItMatters": "One sentence on relevance to the user's interests"
-    }
-  ]
-}`;
-
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1500,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const text = message.content.map(b => b.text || "").join("");
-  const clean = text.replace(/```json|```/g, "").trim();
-  return JSON.parse(clean);
-}
 
 // ─── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => {
