@@ -174,72 +174,103 @@ app.put("/api/preferences", async (req, res) => {
   return res.json({ message: "Preferences updated" });
 });
 
+// In-memory cache for preview jobs, keyed by email.
+// { status: "processing" | "ready" | "error", result?: object, error?: string }
+const previewCache = new Map();
+
 // ─── POST /api/digests/preview ────────────────────────────────
-// Fetches real RSS episodes, summarizes with Claude, returns top 4.
-// Note: takes 5-15s on first run; subsequent runs use cached summaries.
-app.post("/api/digests/preview", async (req, res) => {
+// Kicks off the pipeline in the background and returns 202 immediately.
+// Poll GET /api/episodes/status?email=... to check progress.
+app.post("/api/digests/preview", (req, res) => {
   const { email, interests = [], podcasts = [] } = req.body;
 
   if (!email) return res.status(400).json({ error: "Email required" });
 
-  try {
-    let { data: sources } = await supabase.from("podcast_sources").select("*");
-    if (sources && sources.length > 0 && podcasts.length > 0) {
-      const matched = sources.filter(s =>
-        podcasts.some(p => s.title.toLowerCase().includes(p.toLowerCase()))
-      );
-      if (matched.length > 0) sources = matched;
-    }
+  // Respond immediately — pipeline takes 60-90s and would hit Render's timeout.
+  previewCache.set(email, { status: "processing" });
+  res.status(202).json({ status: "processing", message: "Building your digest..." });
 
-    const allEpisodes = [];
-    for (const source of (sources || [])) {
-      try {
-        const eps = await fetchFeed(source);
-        allEpisodes.push(...eps);
-      } catch (err) {
-        console.error(`[preview] Error fetching ${source.title}:`, err.message);
-      }
-    }
-
-    console.log(`[preview] Fetched ${allEpisodes.length} episodes for ${email}`);
-
-    if (allEpisodes.length === 0) {
-      return res.status(404).json({
-        error: "No new episodes found this week for your selected shows. Check back Monday.",
-      });
-    }
-
-    const summarized = await summarizeEpisodes(allEpisodes);
-    const scored = summarized
-      .map(ep => ({ ...ep, score: scoreEpisode(ep, interests, podcasts) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4);
-
-    const [intro, whyItMattersArr] = await Promise.all([
-      generateIntro(scored, interests),
-      generateWhyItMatters(scored, interests),
-    ]);
-
-    const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
-    const episodes = scored.map((ep, i) => ({
-      show: ep.showTitle,
-      title: ep.title,
-      duration: ep.duration || null,
-      summary: ep.summary?.summary || "",
-      takeaways: ep.summary?.takeaways || [],
-      quote: ep.summary?.quote || "",
-      whyItMatters: whyItMattersArr[i] || "",
-      audio_url: ep.audio_url || null,
-    }));
-
-    return res.json({ weekOf, intro, episodes });
-
-  } catch (err) {
-    console.error("[digest/preview]", err.message);
-    return res.status(500).json({ error: "Failed to generate digest preview" });
-  }
+  runPreviewPipeline(email, interests, podcasts).catch(err => {
+    console.error("[preview] Pipeline failed:", err.stack || err.message);
+    previewCache.set(email, { status: "error", error: err.message });
+  });
 });
+
+// ─── GET /api/episodes/status ─────────────────────────────────
+// Returns the current state of a preview job for the given email.
+// Frontend polls this every 3s after triggering POST /api/digests/preview.
+app.get("/api/episodes/status", (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "Email required" });
+
+  const cached = previewCache.get(email);
+  if (!cached) return res.json({ status: "idle" });
+
+  if (cached.status === "ready") {
+    return res.json({ status: "ready", ...cached.result });
+  }
+  if (cached.status === "error") {
+    return res.json({ status: "error", error: cached.error });
+  }
+  return res.json({ status: "processing" });
+});
+
+async function runPreviewPipeline(email, interests, podcasts) {
+  let { data: sources } = await supabase.from("podcast_sources").select("*");
+  if (sources && sources.length > 0 && podcasts.length > 0) {
+    const matched = sources.filter(s =>
+      podcasts.some(p => s.title.toLowerCase().includes(p.toLowerCase()))
+    );
+    if (matched.length > 0) sources = matched;
+  }
+
+  const allEpisodes = [];
+  for (const source of (sources || [])) {
+    try {
+      const eps = await fetchFeed(source);
+      allEpisodes.push(...eps);
+    } catch (err) {
+      console.error(`[preview] Error fetching ${source.title}:`, err.message);
+    }
+  }
+
+  console.log(`[preview] Fetched ${allEpisodes.length} episodes for ${email}`);
+
+  if (allEpisodes.length === 0) {
+    previewCache.set(email, {
+      status: "error",
+      error: "No new episodes found this week for your selected shows. Check back Monday.",
+    });
+    return;
+  }
+
+  const summarized = await summarizeEpisodes(allEpisodes);
+  const scored = summarized
+    .map(ep => ({ ...ep, score: scoreEpisode(ep, interests, podcasts) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
+  const [intro, whyItMattersArr] = await Promise.all([
+    generateIntro(scored, interests),
+    generateWhyItMatters(scored, interests),
+  ]);
+
+  const weekOf = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const episodes = scored.map((ep, i) => ({
+    show: ep.showTitle,
+    title: ep.title,
+    duration: ep.duration || null,
+    summary: ep.summary?.summary || "",
+    takeaways: ep.summary?.takeaways || [],
+    quote: ep.summary?.quote || "",
+    whyItMatters: whyItMattersArr[i] || "",
+    audio_url: ep.audio_url || null,
+  }));
+
+  previewCache.set(email, { status: "ready", result: { weekOf, intro, episodes } });
+  console.log(`[preview] Complete for ${email}: ${episodes.length} episodes ready`);
+}
 
 // ─── GET /api/digests/:userId ─────────────────────────────────
 app.get("/api/digests/:userId", async (req, res) => {
