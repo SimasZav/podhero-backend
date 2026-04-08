@@ -447,45 +447,67 @@ function App() {
   const togglePodcast = (p) =>
     setPodcasts(prev => prev.includes(p) ? prev.filter(i => i !== p) : [...prev, p]);
 
- const startGenerate = async () => {
+  const startGenerate = async () => {
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
     setPage("generating");
     setGenStep(0);
-    [900, 1900, 3200].forEach((delay, i) => {
-      setTimeout(() => setGenStep(i + 1), delay);
-    });
 
-    // Save user to backend
-   fetch("https://podhero-backend.onrender.com/api/subscribe", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, interests, podcasts, frequency: "weekly" })
-}).then(res => res.json()).then(data => {
-  if (data.userId) {
-    // digest send is handled server-side by the weekly worker
-  }
-}).catch(err => console.log("Error:", err));
+    // Save user to backend (fire and forget)
+    fetch("https://podhero-backend.onrender.com/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, interests, podcasts, frequency: "weekly" })
+    }).then(res => res.json()).catch(err => console.log("Subscribe error:", err));
 
+    // Kick off background pipeline — server responds 202 immediately
     try {
-      const res = await fetch("https://podhero-backend.onrender.com/api/digests/preview", {
+      const kickoff = await fetch("https://podhero-backend.onrender.com/api/digests/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, interests, podcasts })
       });
-      if (res.status === 404) {
-        setGenStep(4);
-        setTimeout(() => setPage("no-episodes"), 800);
-        return;
-      }
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      setGenStep(4);
-      setTimeout(() => { setDigest(data); setPage("digest"); }, 800);
+      if (!kickoff.ok && kickoff.status !== 202) throw new Error(`${kickoff.status}`);
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError("Could not reach the server. Please try again.");
       setTimeout(() => { setPage("onboarding"); setStep(3); setError(null); }, 2500);
+      return;
     }
+
+    // Advance visual steps at rough milestones while the pipeline runs
+    [4000, 15000, 35000].forEach((delay, i) => {
+      setTimeout(() => setGenStep(i + 1), delay);
+    });
+
+    // Poll every 3s until the backend signals ready or error
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `https://podhero-backend.onrender.com/api/episodes/status?email=${encodeURIComponent(email)}`
+        );
+        const data = await res.json();
+
+        if (data.status === "ready") {
+          clearInterval(pollInterval);
+          setGenStep(4);
+          setTimeout(() => { setDigest(data); setPage("digest"); }, 800);
+        } else if (data.status === "error") {
+          clearInterval(pollInterval);
+          if (data.error && data.error.includes("No new episodes")) {
+            setGenStep(4);
+            setTimeout(() => setPage("no-episodes"), 800);
+          } else {
+            setError(data.error || "Something went wrong. Please try again.");
+            setTimeout(() => { setPage("onboarding"); setStep(3); setError(null); }, 2500);
+          }
+        }
+        // status === "processing" → keep polling
+      } catch (err) {
+        clearInterval(pollInterval);
+        setError("Lost connection. Please try again.");
+        setTimeout(() => { setPage("onboarding"); setStep(3); setError(null); }, 2500);
+      }
+    }, 3000);
   };
 
   const reset = () => {
