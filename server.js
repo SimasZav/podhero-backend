@@ -288,6 +288,52 @@ app.get("/api/digests/:userId", async (req, res) => {
   return res.json(data);
 });
 
+// ─── GET /api/admin/users ─────────────────────────────────────
+// Returns all users + their preferences for the admin panel.
+app.get("/api/admin/users", async (req, res) => {
+  const adminKey = req.headers["x-admin-key"];
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, active, created_at, user_preferences(interests, podcasts, frequency, updated_at)")
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ error: "Failed to fetch users" });
+  return res.json(data);
+});
+
+// ─── PUT /api/admin/user-delivery ─────────────────────────────
+// Updates delivery schedule for a specific user.
+app.put("/api/admin/user-delivery", async (req, res) => {
+  const adminKey = req.headers["x-admin-key"];
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const { email, days } = req.body;
+  if (!email || !days) return res.status(400).json({ error: "email and days required" });
+
+  const { data: user, error: userErr } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (userErr || !user) return res.status(404).json({ error: "User not found" });
+
+  const frequency = Array.isArray(days) ? days.join(",") : days;
+  const { error } = await supabase
+    .from("user_preferences")
+    .update({ frequency, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+
+  if (error) return res.status(500).json({ error: "Failed to update delivery" });
+  return res.json({ message: "Delivery updated" });
+});
+
 // ─── POST /api/digests/send-now ───────────────────────────────
 // Admin endpoint: trigger a digest send for a specific user.
 // Protect this in production with an admin secret header.

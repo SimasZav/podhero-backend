@@ -319,6 +319,92 @@
   .no-eps-body { font-size: 15px; color: var(--ink-light); max-width: 440px; line-height: 1.7; margin-bottom: 36px; }
   .no-eps-note { font-family: var(--mono); font-size: 11px; color: var(--ink-light); letter-spacing: 0.3px; margin-bottom: 32px; }
 
+  /* ─── DELIVERY DAY PICKER ─── */
+  .days-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 8px; margin-bottom: 40px;
+  }
+  .day-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 6px; border: 1.5px solid var(--border); background: white;
+    cursor: pointer; font-family: var(--mono); transition: all 0.15s;
+  }
+  .day-btn:hover { border-color: var(--green); }
+  .day-btn.selected { border-color: var(--green); background: var(--green-light); color: var(--green); }
+  .day-btn .day-short { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; }
+  .day-btn .day-check { font-size: 10px; height: 12px; }
+
+  /* ─── ADMIN ─── */
+  .admin-page { min-height: 100vh; background: var(--cream); }
+  .admin-nav {
+    padding: 16px 48px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; background: var(--cream);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .admin-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--green); background: var(--green-light);
+    padding: 3px 10px; margin-left: 12px;
+  }
+  .admin-body { max-width: 900px; margin: 0 auto; padding: 48px 24px; }
+  .admin-login { max-width: 400px; margin: 80px auto; text-align: center; }
+  .admin-login h2 { font-family: var(--serif); font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .admin-login p { color: var(--ink-light); font-size: 14px; margin-bottom: 32px; }
+  .admin-key-row { display: flex; gap: 10px; }
+  .admin-key-input {
+    flex: 1; padding: 12px 14px; border: 1.5px solid var(--border); background: white;
+    font-family: var(--mono); font-size: 13px; color: var(--ink); outline: none;
+    transition: border-color 0.2s;
+  }
+  .admin-key-input:focus { border-color: var(--green); }
+  .admin-section-title {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-light); margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); margin-bottom: 40px; }
+  .admin-stat { background: var(--cream); padding: 24px 20px; }
+  .admin-stat-num { font-family: var(--serif); font-size: 36px; font-weight: 700; color: var(--ink); }
+  .admin-stat-label { font-family: var(--mono); font-size: 11px; color: var(--ink-light); letter-spacing: 1px; margin-top: 4px; }
+  .admin-table-wrap { overflow-x: auto; margin-bottom: 32px; }
+  .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .admin-table th {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ink-light); text-align: left; padding: 10px 14px;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .admin-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--ink-mid); }
+  .admin-table tr:hover td { background: var(--cream-mid); }
+  .admin-table .email-cell { color: var(--ink); font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-active-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .admin-active-dot.active { background: var(--green); }
+  .admin-active-dot.inactive { background: var(--border); }
+  .admin-days-select {
+    border: 1px solid var(--border); background: white; font-family: var(--mono);
+    font-size: 11px; padding: 5px 8px; color: var(--ink); cursor: pointer;
+    outline: none; appearance: none; min-width: 120px;
+  }
+  .admin-days-select:focus { border-color: var(--green); }
+  .admin-btn-sm {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+    padding: 6px 14px; border: none; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .admin-btn-sm.primary { background: var(--ink); color: white; }
+  .admin-btn-sm.primary:hover { background: var(--green); }
+  .admin-btn-sm.outline { background: none; border: 1px solid var(--border); color: var(--ink-light); }
+  .admin-btn-sm.outline:hover { border-color: var(--ink); color: var(--ink); }
+  .admin-btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+  .admin-actions-row { display: flex; gap: 12px; margin-top: 32px; }
+  .admin-send-all {
+    background: var(--green); color: white; border: none;
+    padding: 14px 32px; font-family: var(--mono); font-size: 13px;
+    letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+  }
+  .admin-send-all:hover:not(:disabled) { background: var(--ink); }
+  .admin-send-all:disabled { opacity: 0.4; cursor: not-allowed; }
+  .admin-error { color: #C0392B; font-family: var(--mono); font-size: 12px; margin-top: 12px; }
+
   /* Responsive */
   @media (max-width: 768px) {
     .nav, .ob-header { padding: 16px 20px; }
@@ -355,6 +441,15 @@
 
     /* Bottom toast */
     .bottom-toast { font-size: 12px; padding: 12px 20px; white-space: normal; text-align: center; max-width: calc(100vw - 40px); }
+
+    /* Days grid */
+    .days-grid { grid-template-columns: repeat(4, 1fr); }
+
+    /* Admin */
+    .admin-nav { padding: 12px 16px; }
+    .admin-stats { grid-template-columns: repeat(3, 1fr); }
+    .admin-table { font-size: 12px; }
+    .admin-table td, .admin-table th { padding: 10px 8px; }
   }
 </style>
 </head>
@@ -403,6 +498,21 @@ const GEN_STEPS = [
   "Generating your personalized digest...",
 ];
 
+const DAYS = [
+  { short: "Mon", full: "Monday" },
+  { short: "Tue", full: "Tuesday" },
+  { short: "Wed", full: "Wednesday" },
+  { short: "Thu", full: "Thursday" },
+  { short: "Fri", full: "Friday" },
+  { short: "Sat", full: "Saturday" },
+  { short: "Sun", full: "Sunday" },
+
+];
+
+const ALL_DAYS_SHORT = DAYS.map(d => d.full);
+
+const API = "https://podhero-backend.onrender.com";
+
 /* ─────────────────────── BOTTOM TOAST ─────────────────────── */
 function useToast() {
   const [toast, setToast] = useState(null); // { msg, type, hiding }
@@ -431,11 +541,14 @@ function BottomToast({ toast }) {
 
 /* ───────────────────────── MAIN APP ───────────────────────── */
 function App() {
-  const [page, setPage] = useState("landing");
+  const [page, setPage] = useState(() =>
+    window.location.hash === "#admin" ? "admin" : "landing"
+  );
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [interests, setInterests] = useState([]);
   const [podcasts, setPodcasts] = useState([]);
+  const [days, setDays] = useState(["Monday"]);
   const [digest, setDigest] = useState(null);
   const [genStep, setGenStep] = useState(-1);
   const [error, setError] = useState(null);
@@ -446,6 +559,11 @@ function App() {
     setInterests(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
   const togglePodcast = (p) =>
     setPodcasts(prev => prev.includes(p) ? prev.filter(i => i !== p) : [...prev, p]);
+  const toggleDay = (full) =>
+    setDays(prev => prev.includes(full)
+      ? prev.length > 1 ? prev.filter(d => d !== full) : prev  // keep at least 1
+      : [...prev, full]
+    );
 
   const startGenerate = async () => {
     setShowToast(true);
@@ -454,15 +572,15 @@ function App() {
     setGenStep(0);
 
     // Save user to backend (fire and forget)
-    fetch("https://podhero-backend.onrender.com/api/subscribe", {
+    fetch(`${API}/api/subscribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, interests, podcasts, frequency: "weekly" })
+      body: JSON.stringify({ email, interests, podcasts, frequency: days.join(",") })
     }).then(res => res.json()).catch(err => console.log("Subscribe error:", err));
 
     // Kick off background pipeline — server responds 202 immediately
     try {
-      const kickoff = await fetch("https://podhero-backend.onrender.com/api/digests/preview", {
+      const kickoff = await fetch(`${API}/api/digests/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, interests, podcasts })
@@ -483,7 +601,7 @@ function App() {
     const pollInterval = setInterval(async () => {
       try {
         const res = await fetch(
-          `https://podhero-backend.onrender.com/api/episodes/status?email=${encodeURIComponent(email)}`
+          `${API}/api/episodes/status?email=${encodeURIComponent(email)}`
         );
         const data = await res.json();
 
@@ -512,23 +630,25 @@ function App() {
 
   const reset = () => {
     setPage("landing"); setDigest(null);
-    setInterests([]); setPodcasts([]);
+    setInterests([]); setPodcasts([]); setDays(["Monday"]);
     setEmail(""); setStep(1);
   };
 
-  if (page === "landing") return <Landing onStart={() => setPage("onboarding")} />;
+  if (page === "admin") return <Admin onExit={() => setPage("landing")} />;
+  if (page === "landing") return <Landing onStart={() => setPage("onboarding")} onAdmin={() => setPage("admin")} />;
   if (page === "onboarding") return (
     <Onboarding
       step={step} setStep={setStep}
       email={email} setEmail={setEmail}
       interests={interests} toggleInterest={toggleInterest}
       podcasts={podcasts} togglePodcast={togglePodcast}
+      days={days} toggleDay={toggleDay}
       onGenerate={startGenerate} error={error}
     />
   );
   if (page === "generating") return (
     <>
-      {showToast && <SuccessToast />}
+      {showToast && <SuccessToast days={days} />}
       <Generating genStep={genStep} />
     </>
   );
@@ -559,14 +679,21 @@ function NoEpisodes({ email, onReset }) {
 }
 
 /* ─────────────────────── SUCCESS TOAST ─────────────────────── */
-function SuccessToast() {
-  const nextMonday = (() => {
-    const d = new Date();
-    const day = d.getDay();
-    const daysUntilMonday = day === 0 ? 1 : 8 - day;
-    d.setDate(d.getDate() + daysUntilMonday);
-    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  })();
+const DAY_INDEX = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6 };
+
+function nextOccurrence(dayName) {
+  const target = DAY_INDEX[dayName];
+  const d = new Date();
+  const current = d.getDay();
+  const diff = (target - current + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function SuccessToast({ days }) {
+  const firstDay = (days && days.length > 0) ? days[0] : "Monday";
+  const label = nextOccurrence(firstDay);
+  const extra = days && days.length > 1 ? ` and ${days.slice(1).join(", ")}` : "";
 
   return (
     <div className="toast-overlay">
@@ -574,7 +701,7 @@ function SuccessToast() {
         <div className="toast-emoji">🎉</div>
         <div className="toast-title">You're in!</div>
         <p className="toast-body">
-          Your first digest lands <strong>Monday, {nextMonday}</strong>.<br />
+          Your first digest lands <strong>{label}</strong>{extra ? `, then ${extra}` : ""}.<br />
           Enjoy a preview of shows you might love below.
         </p>
       </div>
@@ -583,7 +710,7 @@ function SuccessToast() {
 }
 
 /* ─────────────────────── LANDING ─────────────────────── */
-function Landing({ onStart }) {
+function Landing({ onStart, onAdmin }) {
   return (
     <div>
       <nav className="nav">
@@ -623,12 +750,21 @@ function Landing({ onStart }) {
       <div className="social-proof">
         <p className="sp-text">"Finally caught up on everything I care about — without listening to a single episode."</p>
       </div>
+
+      <div style={{ textAlign: "center", padding: "20px", borderTop: "1px solid var(--border)" }}>
+        <button
+          onClick={onAdmin}
+          style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "var(--mono)", fontSize: "11px", color: "var(--border)", letterSpacing: "1px" }}
+        >
+          Admin
+        </button>
+      </div>
     </div>
   );
 }
 
 /* ─────────────────────── ONBOARDING ─────────────────────── */
-function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest, podcasts, togglePodcast, onGenerate, error }) {
+function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest, podcasts, togglePodcast, days, toggleDay, onGenerate, error }) {
   const canNext1 = email.length > 5 && email.includes("@");
   const canNext2 = interests.length > 0;
 
@@ -637,7 +773,7 @@ function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest,
       <div className="ob-header">
         <div className="logo">Pod<span className="logo-green">Hero</span></div>
         <div className="ob-progress">
-          {[1, 2, 3].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <div key={s} className={`ob-dot${step >= s ? " active" : ""}`} />
           ))}
         </div>
@@ -646,9 +782,9 @@ function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest,
       <div className="ob-body">
         {step === 1 && (
           <div>
-            <div className="ob-step-label">Step 1 of 3</div>
+            <div className="ob-step-label">Step 1 of 4</div>
             <h2 className="ob-title">Where should we send your digest?</h2>
-            <p className="ob-sub">You'll receive your first briefing next Monday morning.</p>
+            <p className="ob-sub">You'll be able to choose your delivery days in the next step.</p>
             <input
               className="ob-input"
               type="email"
@@ -666,7 +802,31 @@ function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest,
 
         {step === 2 && (
           <div>
-            <div className="ob-step-label">Step 2 of 3</div>
+            <div className="ob-step-label">Step 2 of 4</div>
+            <h2 className="ob-title">When do you want your digest?</h2>
+            <p className="ob-sub">Pick one or more days. Your briefing will arrive every week on those mornings.</p>
+            <div className="days-grid">
+              {DAYS.map(({ short, full }) => (
+                <button
+                  key={full}
+                  className={`day-btn${days.includes(full) ? " selected" : ""}`}
+                  onClick={() => toggleDay(full)}
+                >
+                  <span className="day-short">{short}</span>
+                  <span className="day-check">{days.includes(full) ? "✓" : ""}</span>
+                </button>
+              ))}
+            </div>
+            <button className="ob-next" onClick={() => setStep(3)}>
+              Continue →
+            </button>
+            <button className="ob-back" onClick={() => setStep(1)}>← Back</button>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div>
+            <div className="ob-step-label">Step 3 of 4</div>
             <h2 className="ob-title">What do you care about?</h2>
             <p className="ob-sub">Select all that apply. This shapes how we filter and rank episodes.</p>
             <div className="interests-grid">
@@ -682,16 +842,16 @@ function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest,
                 </button>
               ))}
             </div>
-            <button className="ob-next" onClick={() => setStep(3)} disabled={!canNext2}>
+            <button className="ob-next" onClick={() => setStep(4)} disabled={!canNext2}>
               Continue →
             </button>
-            <button className="ob-back" onClick={() => setStep(1)}>← Back</button>
+            <button className="ob-back" onClick={() => setStep(2)}>← Back</button>
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div>
-            <div className="ob-step-label">Step 3 of 3</div>
+            <div className="ob-step-label">Step 4 of 4</div>
             <h2 className="ob-title">Which shows do you follow?</h2>
             <p className="ob-sub">Optional — we'll include these in your digest even if they don't match your topics perfectly.</p>
             <div className="podcasts-list">
@@ -712,7 +872,7 @@ function Onboarding({ step, setStep, email, setEmail, interests, toggleInterest,
             <button className="ob-next" onClick={onGenerate}>
               Generate my digest →
             </button>
-            <button className="ob-back" onClick={() => setStep(2)}>← Back</button>
+            <button className="ob-back" onClick={() => setStep(3)}>← Back</button>
           </div>
         )}
       </div>
@@ -747,7 +907,7 @@ function Digest({ digest, email, onReset, showToast }) {
   const handleSendNow = async () => {
     setSending(true);
     try {
-      const res = await fetch("https://podhero-backend.onrender.com/api/digests/send-now", {
+      const res = await fetch(`${API}/api/digests/send-now`, {
         method: "POST",
         headers: { "x-admin-key": "podhero-admin" },
       });
@@ -774,9 +934,7 @@ function Digest({ digest, email, onReset, showToast }) {
 
   const handleUnsubscribe = async () => {
     try {
-      await fetch(
-        `https://podhero-backend.onrender.com/api/unsubscribe?email=${encodeURIComponent(email)}`
-      );
+      await fetch(`${API}/api/unsubscribe?email=${encodeURIComponent(email)}`);
     } catch (_) {}
     setUnsubscribed(true);
     showToast("You've been unsubscribed.", "success");
@@ -871,6 +1029,244 @@ function Digest({ digest, email, onReset, showToast }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── ADMIN ─────────────────────── */
+function Admin({ onExit }) {
+  const [adminKey, setAdminKey] = useState("");
+  const [authed, setAuthed] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
+  const [sendingUser, setSendingUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null); // email
+  const [editDays, setEditDays] = useState([]);
+  const [savingDays, setSavingDays] = useState(false);
+  const { toast, showToast } = useToast();
+
+  const parseDays = (frequency) => {
+    if (!frequency || frequency === "weekly") return ["Monday"];
+    return frequency.split(",").map(d => d.trim()).filter(Boolean);
+  };
+
+  const fetchUsers = async (key) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/admin/users`, {
+        headers: { "x-admin-key": key }
+      });
+      if (res.status === 403) { setAuthError("Wrong admin key."); return; }
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      setUsers(data);
+      setAuthed(true);
+      setAuthError(null);
+    } catch {
+      setAuthError("Could not reach server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnlock = (e) => {
+    e.preventDefault();
+    if (!adminKey.trim()) return;
+    fetchUsers(adminKey.trim());
+  };
+
+  const handleSendAll = async () => {
+    setSendingAll(true);
+    try {
+      const res = await fetch(`${API}/api/digests/send-now`, {
+        method: "POST",
+        headers: { "x-admin-key": adminKey }
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      showToast("Digest pipeline started — check Render logs.", "success");
+    } catch {
+      showToast("Failed to trigger send.", "error");
+    } finally {
+      setSendingAll(false);
+    }
+  };
+
+  const startEditDays = (user) => {
+    setEditingUser(user.email);
+    setEditDays(parseDays(user.user_preferences?.frequency));
+  };
+
+  const toggleEditDay = (full) => {
+    setEditDays(prev => prev.includes(full)
+      ? prev.length > 1 ? prev.filter(d => d !== full) : prev
+      : [...prev, full]
+    );
+  };
+
+  const saveEditDays = async (email) => {
+    setSavingDays(true);
+    try {
+      const res = await fetch(`${API}/api/admin/user-delivery`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ email, days: editDays })
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setUsers(prev => prev.map(u =>
+        u.email === email
+          ? { ...u, user_preferences: { ...u.user_preferences, frequency: editDays.join(",") } }
+          : u
+      ));
+      setEditingUser(null);
+      showToast("Schedule updated.", "success");
+    } catch {
+      showToast("Failed to update schedule.", "error");
+    } finally {
+      setSavingDays(false);
+    }
+  };
+
+  const active = users.filter(u => u.active).length;
+  const inactive = users.length - active;
+
+  return (
+    <div className="admin-page">
+      <div className="admin-nav">
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <div className="logo">Pod<span className="logo-green">Hero</span></div>
+          <span className="admin-badge">Admin</span>
+        </div>
+        <button className="btn-outline" onClick={onExit}>← Exit admin</button>
+      </div>
+
+      <div className="admin-body">
+        {!authed ? (
+          <div className="admin-login">
+            <h2>Admin access</h2>
+            <p>Enter your admin key to unlock the dashboard.</p>
+            <form onSubmit={handleUnlock}>
+              <div className="admin-key-row">
+                <input
+                  className="admin-key-input"
+                  type="password"
+                  placeholder="Admin key"
+                  value={adminKey}
+                  onChange={e => setAdminKey(e.target.value)}
+                  autoFocus
+                />
+                <button className="btn-primary" type="submit" disabled={loading}>
+                  {loading ? "..." : "Unlock"}
+                </button>
+              </div>
+              {authError && <p className="admin-error" style={{ marginTop: "12px" }}>{authError}</p>}
+            </form>
+          </div>
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="admin-section-title" style={{ marginBottom: "16px" }}>Overview</div>
+            <div className="admin-stats" style={{ marginBottom: "40px" }}>
+              <div className="admin-stat">
+                <div className="admin-stat-num">{users.length}</div>
+                <div className="admin-stat-label">Total subscribers</div>
+              </div>
+              <div className="admin-stat">
+                <div className="admin-stat-num" style={{ color: "var(--green)" }}>{active}</div>
+                <div className="admin-stat-label">Active</div>
+              </div>
+              <div className="admin-stat">
+                <div className="admin-stat-num" style={{ color: "var(--ink-light)" }}>{inactive}</div>
+                <div className="admin-stat-label">Unsubscribed</div>
+              </div>
+            </div>
+
+            {/* Subscribers table */}
+            <div className="admin-section-title">Subscribers</div>
+            <div className="admin-table-wrap">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Email</th>
+                    <th>Interests</th>
+                    <th>Shows</th>
+                    <th>Delivery schedule</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => {
+                    const prefs = u.user_preferences || {};
+                    const userDays = parseDays(prefs.frequency);
+                    const isEditing = editingUser === u.email;
+                    return (
+                      <tr key={u.id}>
+                        <td>
+                          <span className={`admin-active-dot ${u.active ? "active" : "inactive"}`} />
+                        </td>
+                        <td className="email-cell" title={u.email}>{u.email}</td>
+                        <td>{(prefs.interests || []).length} topics</td>
+                        <td>{(prefs.podcasts || []).length} shows</td>
+                        <td>
+                          {isEditing ? (
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                              {DAYS.map(({ short, full }) => (
+                                <button
+                                  key={full}
+                                  onClick={() => toggleEditDay(full)}
+                                  style={{
+                                    fontFamily: "var(--mono)", fontSize: "10px", padding: "3px 8px",
+                                    border: `1px solid ${editDays.includes(full) ? "var(--green)" : "var(--border)"}`,
+                                    background: editDays.includes(full) ? "var(--green-light)" : "white",
+                                    color: editDays.includes(full) ? "var(--green)" : "var(--ink-light)",
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  {short}
+                                </button>
+                              ))}
+                              <button className="admin-btn-sm primary" onClick={() => saveEditDays(u.email)} disabled={savingDays}>
+                                {savingDays ? "..." : "Save"}
+                              </button>
+                              <button className="admin-btn-sm outline" onClick={() => setEditingUser(null)}>Cancel</button>
+                            </div>
+                          ) : (
+                            <span style={{ fontFamily: "var(--mono)", fontSize: "11px" }}>
+                              {userDays.map(d => d.slice(0, 3)).join(", ")}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {!isEditing && (
+                            <button className="admin-btn-sm outline" onClick={() => startEditDays(u)}>
+                              Edit schedule
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Global actions */}
+            <div className="admin-section-title">Actions</div>
+            <div className="admin-actions-row">
+              <button className="admin-send-all" onClick={handleSendAll} disabled={sendingAll}>
+                {sendingAll ? "Starting..." : "Send digest to all active users →"}
+              </button>
+              <button className="btn-outline" onClick={() => fetchUsers(adminKey)}>
+                Refresh
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <BottomToast toast={toast} />
     </div>
   );
 }
