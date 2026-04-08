@@ -566,8 +566,6 @@ function App() {
     );
 
   const startGenerate = async () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
     setPage("generating");
     setGenStep(0);
 
@@ -608,7 +606,7 @@ function App() {
         if (data.status === "ready") {
           clearInterval(pollInterval);
           setGenStep(4);
-          setTimeout(() => { setDigest(data); setPage("digest"); }, 800);
+          setTimeout(() => { setDigest(data); setShowToast(true); setPage("digest"); setTimeout(() => setShowToast(false), 4000); }, 800);
         } else if (data.status === "error") {
           clearInterval(pollInterval);
           if (data.error && data.error.includes("No new episodes")) {
@@ -646,15 +644,11 @@ function App() {
       onGenerate={startGenerate} error={error}
     />
   );
-  if (page === "generating") return (
-    <>
-      {showToast && <SuccessToast days={days} />}
-      <Generating genStep={genStep} />
-    </>
-  );
+  if (page === "generating") return <Generating genStep={genStep} />;
   if (page === "no-episodes") return <NoEpisodes email={email} onReset={reset} />;
   if (page === "digest" && digest) return (
     <>
+      {showToast && <SuccessToast days={days} />}
       <Digest digest={digest} email={email} onReset={reset} showToast={showBottomToast} />
       <BottomToast toast={toast} />
     </>
