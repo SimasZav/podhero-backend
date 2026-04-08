@@ -69,18 +69,17 @@ async function runWeeklyDigests() {
     }
     console.log(`[worker] Ingesting ${allSources.length} podcast feeds`);
 
-    const episodesByShow = {};
-    for (const source of allSources) {
-      try {
-        const episodes = await fetchFeed(source);
-        episodesByShow[source.title] = episodes;
-        console.log(`[rss] ${source.title}: ${episodes.length} recent episodes`);
-      } catch (err) {
-        console.error(`[rss] Error fetching ${source.title}:`, err.stack || err.message);
+    // Fetch all feeds in parallel
+    const feedResults = await Promise.allSettled(allSources.map(source => fetchFeed(source)));
+    const allEpisodes = [];
+    feedResults.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        console.log(`[rss] ${allSources[i].title}: ${result.value.length} recent episodes`);
+        allEpisodes.push(...result.value);
+      } else {
+        console.error(`[rss] Error fetching ${allSources[i].title}:`, result.reason?.message);
       }
-    }
-
-    const allEpisodes = Object.values(episodesByShow).flat();
+    });
     console.log(`[worker] Total episodes to summarize: ${allEpisodes.length}`);
     const summarizedEpisodes = await summarizeEpisodes(allEpisodes);
     console.log(`[worker] Summarized ${summarizedEpisodes.length} episodes`);
@@ -120,59 +119,68 @@ async function fetchFeed(source) {
     return pubDate > oneWeekAgo;
   });
 
-  const episodes = [];
-  for (const item of recent) {
-    const guid = item.guid?.["#text"] || item.guid || item.link;
-    console.log(`[rss] "${item.title}" — raw pubDate: ${item.pubDate}`);
+  if (recent.length === 0) return [];
 
-    const episodeData = {
-      podcast_id: source.id,
-      guid: guid,
-      title: item.title,
-      description: item.description?.substring(0, 500) || "",
-      audio_url: item.enclosure?.["@_url"] || null,
-      duration: formatDuration(item["itunes:duration"]),
-      pub_date: new Date(item.pubDate).toISOString(),
-    };
+  // Batch upsert all episodes in one DB roundtrip
+  const rows = recent.map(item => ({
+    podcast_id: source.id,
+    guid: item.guid?.["#text"] || item.guid || item.link,
+    title: item.title,
+    description: item.description?.substring(0, 500) || "",
+    audio_url: item.enclosure?.["@_url"] || null,
+    duration: formatDuration(item["itunes:duration"]),
+    pub_date: new Date(item.pubDate).toISOString(),
+  }));
 
-    const { data, error } = await supabase
-      .from("episodes")
-      .upsert(episodeData, { onConflict: "guid", ignoreDuplicates: false })
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from("episodes")
+    .upsert(rows, { onConflict: "guid", ignoreDuplicates: false })
+    .select();
 
-    if (!error && data) {
-      episodes.push({ ...data, showTitle: source.title });
-    }
+  if (error) {
+    console.error(`[rss] Batch upsert failed for ${source.title}:`, error.message);
+    return [];
   }
 
-  return episodes;
+  return (data || []).map(ep => ({ ...ep, showTitle: source.title }));
 }
 
 async function summarizeEpisodes(episodes) {
-  const summarized = [];
+  if (episodes.length === 0) return [];
 
-  for (const episode of episodes) {
-    const { data: existing } = await supabase
-      .from("summaries")
-      .select("*")
-      .eq("episode_id", episode.id)
-      .single();
+  // Single batch lookup for all cached summaries
+  const ids = episodes.map(ep => ep.id).filter(Boolean);
+  const { data: cached } = await supabase
+    .from("summaries")
+    .select("*")
+    .in("episode_id", ids);
 
-    if (existing) {
-      summarized.push({ ...episode, summary: existing });
-      continue;
-    }
+  const cachedMap = new Map((cached || []).map(s => [s.episode_id, s]));
 
-    try {
-      const summary = await summarizeEpisode(episode);
-      summarized.push({ ...episode, summary });
-    } catch (err) {
-      console.error(`[claude] Failed to summarize "${episode.title}":`, err.message);
-    }
+  const alreadySummarized = episodes
+    .filter(ep => cachedMap.has(ep.id))
+    .map(ep => ({ ...ep, summary: cachedMap.get(ep.id) }));
+
+  const needsSummary = episodes.filter(ep => !cachedMap.has(ep.id));
+
+  console.log(`[claude] ${alreadySummarized.length} cached, ${needsSummary.length} need summarization`);
+
+  // Summarize uncached episodes with concurrency limit of 5
+  const CONCURRENCY = 5;
+  const newlySummarized = [];
+  for (let i = 0; i < needsSummary.length; i += CONCURRENCY) {
+    const batch = needsSummary.slice(i, i + CONCURRENCY);
+    const settled = await Promise.allSettled(batch.map(ep => summarizeEpisode(ep)));
+    settled.forEach((result, j) => {
+      if (result.status === "fulfilled") {
+        newlySummarized.push({ ...batch[j], summary: result.value });
+      } else {
+        console.error(`[claude] Failed to summarize "${batch[j].title}":`, result.reason?.message);
+      }
+    });
   }
 
-  return summarized;
+  return [...alreadySummarized, ...newlySummarized];
 }
 
 async function summarizeEpisode(episode) {

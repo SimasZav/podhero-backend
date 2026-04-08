@@ -224,15 +224,13 @@ async function runPreviewPipeline(email, interests, podcasts) {
     if (matched.length > 0) sources = matched;
   }
 
+  // Fetch all feeds in parallel
+  const feedResults = await Promise.allSettled((sources || []).map(source => fetchFeed(source)));
   const allEpisodes = [];
-  for (const source of (sources || [])) {
-    try {
-      const eps = await fetchFeed(source);
-      allEpisodes.push(...eps);
-    } catch (err) {
-      console.error(`[preview] Error fetching ${source.title}:`, err.message);
-    }
-  }
+  feedResults.forEach((result, i) => {
+    if (result.status === "fulfilled") allEpisodes.push(...result.value);
+    else console.error(`[preview] Error fetching ${sources[i].title}:`, result.reason?.message);
+  });
 
   console.log(`[preview] Fetched ${allEpisodes.length} episodes for ${email}`);
 
